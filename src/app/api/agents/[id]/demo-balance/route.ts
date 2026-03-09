@@ -5,6 +5,9 @@ import { getFileAgentById, setFileAgentDemoBalance } from '@/lib/db/file-agents'
 import { getDemoPositions } from '@/lib/db/file-demo-transactions';
 import { z } from 'zod';
 
+// Ensure this route runs on the Node.js runtime (not Edge) to be compatible with next-auth
+export const runtime = 'nodejs';
+
 const bodySchema = z.object({
   demoBalance: z.number().min(0).max(1_000_000),
 });

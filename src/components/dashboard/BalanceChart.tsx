@@ -40,8 +40,9 @@ export function BalanceChart({ data }: { data: DataPoint[] }) {
             tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v))}
           />
           <Tooltip
-            formatter={(value: number) => [`${Number(value).toFixed(2)} USDT`, 'Объём']}
-            labelFormatter={(label) => formatDateShort(label)}
+            // тип any здесь допустим: форматируем только числовое значение для тултипа
+            formatter={(value: any) => [`${Number(value ?? 0).toFixed(2)} USDT`, 'Объём']}
+            labelFormatter={(label) => formatDateShort(String(label))}
           />
           <Area
             type="monotone"

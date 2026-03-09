@@ -56,7 +56,12 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
           const policy = await Policy.findOne({ agentId: id }).lean();
           initialPolicy = policy
             ? (() => {
-                const ops = (policy.allowedOperations || []).map(mapOp).filter((o): o is (typeof ALLOWED_OPS)[number] => o != null);
+                const ops = (policy.allowedOperations || [])
+                  .map(mapOp)
+                  .filter(
+                    (o: (typeof ALLOWED_OPS)[number] | null): o is (typeof ALLOWED_OPS)[number] =>
+                      o != null
+                  );
                 return {
                   dailyLimit: policy.dailyLimit,
                   weeklyLimit: policy.weeklyLimit,
@@ -84,7 +89,12 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
       const filePolicies = await getFilePoliciesByEmail(session.user.email, id);
       const fp = filePolicies[0];
       if (fp && !initialPolicy) {
-        const ops = (fp.allowedOperations || []).map(mapOp).filter((o): o is (typeof ALLOWED_OPS)[number] => o != null);
+        const ops = (fp.allowedOperations || [])
+          .map(mapOp)
+          .filter(
+            (o: (typeof ALLOWED_OPS)[number] | null): o is (typeof ALLOWED_OPS)[number] =>
+              o != null
+          );
         initialPolicy = {
           dailyLimit: fp.dailyLimit,
           weeklyLimit: fp.weeklyLimit,

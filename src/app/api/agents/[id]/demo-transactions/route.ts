@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { getDemoTransactionsByAgent } from '@/lib/db/file-demo-transactions';
 
+export const runtime = 'nodejs';
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

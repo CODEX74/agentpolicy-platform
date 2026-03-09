@@ -1,23 +1,16 @@
 import { NextResponse } from 'next/server';
-import dbConnect from '@/lib/db/mongoose';
+import fs from 'fs/promises';
+import path from 'path';
 
 export async function GET() {
   try {
-    if (!process.env.MONGODB_URI) {
-      return NextResponse.json(
-        { ok: false, error: 'MONGODB_URI не задан в .env.local' },
-        { status: 503 }
-      );
-    }
-    await dbConnect();
+    const dataDir = path.join(process.cwd(), 'data');
+    await fs.mkdir(dataDir, { recursive: true });
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error('Health check failed:', e);
     return NextResponse.json(
-      {
-        ok: false,
-        error: 'Не удалось подключиться к MongoDB. Запустите MongoDB и проверьте MONGODB_URI в .env.local',
-      },
+      { ok: false, error: 'Не удалось проверить хранилище' },
       { status: 503 }
     );
   }

@@ -7,7 +7,7 @@
 - **Next.js 16** (App Router)
 - **TypeScript 5**
 - **Tailwind CSS 4**
-- **MongoDB** (Mongoose)
+- **Файловое хранилище** (JSON в `data/`)
 - **NextAuth.js**
 - **Coinbase CDP (AgentKit)**
 - **Vercel AI SDK**
@@ -30,7 +30,6 @@ cp .env.example .env.local
 
 Заполните в `.env.local`:
 
-- `MONGODB_URI` — строка подключения MongoDB
 - `NEXTAUTH_URL` и `NEXTAUTH_SECRET` — для аутентификации
 - `CDP_API_KEY_NAME` и `CDP_API_KEY_PRIVATE_KEY` — ключи из [Coinbase CDP Portal](https://portal.cdp.coinbase.com/projects/api-keys)
 - При необходимости: `OPENAI_API_KEY` (для демо-режима агента: нейросеть принимает решения о покупке/продаже), `MOLTBOOK_API_KEY`, `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
@@ -49,29 +48,13 @@ cp .env.example .env.local
 2. На странице агента включите переключатель **«Работать 24/7»** и задайте **демо-баланс** > 0. Крон запускает только агентов с этим режимом и положительным балансом.
 3. **На Vercel** — проверьте, что в настройках проекта задан `CRON_SECRET`. На тарифе Hobby крон может иметь ограничения; для стабильной работы каждые 5 минут может потребоваться Pro.
 
-### 3. База данных
-
-Локально (Docker):
-
-```bash
-docker run -d -p 27017:27017 --name mongodb-agentpolicy mongo:latest
-```
-
-Создание индексов (опционально):
-
-```bash
-node scripts/init-db.js
-```
-
-Убедитесь, что в окружении задан `MONGODB_URI`.
-
-### 4. Запуск
+### 3. Запуск
 
 ```bash
 npm run dev
 ```
 
-Откройте [http://localhost:3000](http://localhost:3000).
+Откройте [http://localhost:3000](http://localhost:3000). Данные сохраняются в папке `data/` (пользователи, агенты, политики, демо-транзакции).
 
 ## Скрипты
 

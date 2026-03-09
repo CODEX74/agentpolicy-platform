@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import dbConnect from '@/lib/db/mongoose';
-import Agent from '@/lib/db/models/Agent';
+import {
+  getFileAgentById,
+  updateFileAgent,
+  deleteFileAgent,
+} from '@/lib/db/file-agents';
 import { z } from 'zod';
 
 const updateAgentSchema = z.object({
@@ -20,13 +23,8 @@ export async function GET(
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    await dbConnect();
-    const User = (await import('@/lib/db/models/User')).default;
-    const user = await User.findOne({ email: session.user.email });
-    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-
     const { id } = await params;
-    const agent = await Agent.findOne({ _id: id, userId: user._id }).populate('walletId');
+    const agent = await getFileAgentById(id, session.user.email);
     if (!agent) return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     return NextResponse.json(agent);
   } catch (err) {
@@ -44,19 +42,11 @@ export async function PATCH(
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    await dbConnect();
-    const User = (await import('@/lib/db/models/User')).default;
-    const user = await User.findOne({ email: session.user.email });
-    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-
     const { id } = await params;
-    const agent = await Agent.findOne({ _id: id, userId: user._id });
-    if (!agent) return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
-
     const body = await req.json();
     const data = updateAgentSchema.parse(body);
-    Object.assign(agent, data);
-    await agent.save();
+    const agent = await updateFileAgent(id, session.user.email, data);
+    if (!agent) return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     return NextResponse.json(agent);
   } catch (err) {
     if (err instanceof z.ZodError) {
@@ -76,14 +66,9 @@ export async function DELETE(
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    await dbConnect();
-    const User = (await import('@/lib/db/models/User')).default;
-    const user = await User.findOne({ email: session.user.email });
-    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-
     const { id } = await params;
-    const agent = await Agent.findOneAndDelete({ _id: id, userId: user._id });
-    if (!agent) return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+    const ok = await deleteFileAgent(id, session.user.email);
+    if (!ok) return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error('DELETE /api/agents/[id]', err);

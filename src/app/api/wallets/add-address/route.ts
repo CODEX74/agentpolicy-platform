@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { safeDbConnect } from '@/lib/db/mongoose';
-import Wallet from '@/lib/db/models/Wallet';
-import User from '@/lib/db/models/User';
-import { createFileWallet, setFileWalletAgentId } from '@/lib/db/file-wallets';
+import { createFileWallet, getFileWalletByAddress, setFileWalletAgentId } from '@/lib/db/file-wallets';
 import { updateFileAgentWallet } from '@/lib/db/file-agents';
 import { z } from 'zod';
 
@@ -26,43 +23,6 @@ export async function POST(req: NextRequest) {
     const { address, agentId } = bodySchema.parse(body);
     const normalizedAddress = address.trim().toLowerCase();
 
-    const db = await safeDbConnect();
-    if (db) {
-      try {
-        const user = await User.findOne({ email });
-        if (user) {
-          const existing = await Wallet.findOne({
-            address: normalizedAddress,
-            userId: user._id,
-          });
-          if (existing) {
-            if (agentId) {
-              await Wallet.findByIdAndUpdate(existing._id, { agentId });
-              const Agent = (await import('@/lib/db/models/Agent')).default;
-              await Agent.findByIdAndUpdate(agentId, { walletId: existing._id });
-            }
-            return NextResponse.json(existing);
-          }
-          const wallet = await Wallet.create({
-            userId: user._id,
-            agentId: agentId || undefined,
-            address: normalizedAddress,
-            networkId: process.env.NETWORK_ID ?? 'base-sepolia',
-            cdpWalletId: null,
-            isDefault: false,
-          });
-          if (agentId) {
-            const Agent = (await import('@/lib/db/models/Agent')).default;
-            await Agent.findByIdAndUpdate(agentId, { walletId: wallet._id });
-          }
-          return NextResponse.json(wallet);
-        }
-      } catch {
-        // fallback to file
-      }
-    }
-
-    const { getFileWalletByAddress } = await import('@/lib/db/file-wallets');
     const existingFile = await getFileWalletByAddress(normalizedAddress, email);
     if (existingFile) {
       if (agentId) {

@@ -133,6 +133,33 @@ export async function setFileAgentRun24_7(
   return agents[idx];
 }
 
+export async function updateFileAgent(
+  agentId: string,
+  userEmail: string,
+  data: { name?: string; description?: string; isActive?: boolean }
+): Promise<FileAgent | null> {
+  const agents = await readAgents();
+  const lower = userEmail.toLowerCase().trim();
+  const idx = agents.findIndex((a) => a._id === agentId && a.userEmail.toLowerCase() === lower);
+  if (idx < 0) return null;
+  if (data.name != null) agents[idx].name = data.name.trim();
+  if (data.description != null) agents[idx].description = data.description.trim();
+  if (data.isActive != null) agents[idx].isActive = data.isActive;
+  agents[idx].updatedAt = new Date().toISOString();
+  await writeAgents(agents);
+  return agents[idx];
+}
+
+export async function deleteFileAgent(agentId: string, userEmail: string): Promise<boolean> {
+  const agents = await readAgents();
+  const lower = userEmail.toLowerCase().trim();
+  const idx = agents.findIndex((a) => a._id === agentId && a.userEmail.toLowerCase() === lower);
+  if (idx < 0) return false;
+  agents.splice(idx, 1);
+  await writeAgents(agents);
+  return true;
+}
+
 /** Восстановить демо-баланс всех агентов пользователя до изначального (после очистки транзакций). */
 export async function resetAgentsDemoBalanceForUser(userEmail: string): Promise<void> {
   const agents = await readAgents();

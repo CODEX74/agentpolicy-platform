@@ -1,9 +1,7 @@
-import type { Types } from 'mongoose';
-
 export interface IWallet {
-  _id: Types.ObjectId;
-  userId: Types.ObjectId;
-  agentId?: Types.ObjectId | null;
+  _id: string;
+  userId: string;
+  agentId?: string | null;
   address: string;
   networkId: string;
   cdpWalletId?: string | null;

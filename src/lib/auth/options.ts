@@ -1,55 +1,37 @@
 import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
-import { MongoDBAdapter } from '@auth/mongodb-adapter';
-import clientPromise from './mongodb-client';
-import dbConnect from '@/lib/db/mongoose';
-import User from '@/lib/db/models/User';
-import { getFileUserByEmail } from '@/lib/db/file-users';
+import { getFileUserByEmail, upsertFileUserFromOAuth } from '@/lib/db/file-users';
 import { verifyPassword } from './password';
 
 const providers: NextAuthOptions['providers'] = [
   CredentialsProvider({
-      name: 'Credentials',
-      credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
-        const email = credentials.email.toLowerCase();
+    name: 'Credentials',
+    credentials: {
+      email: { label: 'Email', type: 'email' },
+      password: { label: 'Password', type: 'password' },
+    },
+    async authorize(credentials) {
+      if (!credentials?.email || !credentials?.password) return null;
+      const email = credentials.email.toLowerCase();
 
-        // Сначала проверяем файловое хранилище — быстро, без ожидания MongoDB
-        const fileUser = await getFileUserByEmail(email);
-        if (fileUser) {
-          const ok = verifyPassword(credentials.password, fileUser.password);
-          if (ok) {
-            return {
-              id: fileUser.id,
-              email: fileUser.email,
-              name: fileUser.name,
-              image: '',
-              plan: fileUser.plan ?? 'free',
-              subscriptionExpiresAt: fileUser.subscriptionExpiresAt ?? null,
-            };
-          }
-          return null;
+      const fileUser = await getFileUserByEmail(email);
+      if (fileUser) {
+        const ok = verifyPassword(credentials.password, fileUser.password);
+        if (ok) {
+          return {
+            id: fileUser.id,
+            email: fileUser.email,
+            name: fileUser.name,
+            image: '',
+            plan: fileUser.plan ?? 'free',
+            subscriptionExpiresAt: fileUser.subscriptionExpiresAt ?? null,
+          };
         }
-
-        // Пользователя нет в файле — пробуем MongoDB
-        try {
-          await dbConnect();
-          const user = await User.findOne({ email });
-          if (user?.password) {
-            const ok = verifyPassword(credentials.password, user.password);
-            if (ok) return { id: user._id.toString(), email: user.email, name: user.name, image: user.image };
-          }
-        } catch {
-          // MongoDB недоступна — пользователь не найден
-        }
-        return null;
-      },
-    }),
+      }
+      return null;
+    },
+  }),
 ];
 
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
@@ -62,10 +44,19 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 }
 
 export const authOptions: NextAuthOptions = {
-  adapter: MongoDBAdapter(clientPromise),
   session: { strategy: 'jwt', maxAge: 30 * 24 * 60 * 60 },
   pages: { signIn: '/login', error: '/login' },
   providers,
+  events: {
+    async signIn({ user, account }) {
+      if (account?.provider === 'google' && user?.email) {
+        await upsertFileUserFromOAuth({
+          email: user.email,
+          name: user.name ?? user.email.split('@')[0],
+        });
+      }
+    },
+  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {

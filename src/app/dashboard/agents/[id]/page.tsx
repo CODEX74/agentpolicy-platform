@@ -7,10 +7,6 @@ import { PolicyBuilder } from '@/components/dashboard/PolicyBuilder';
 import { AgentWalletCard } from '@/components/dashboard/AgentWalletCard';
 import { AgentDemoCard } from '@/components/dashboard/AgentDemoCard';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
-import { safeDbConnect } from '@/lib/db/mongoose';
-import Agent from '@/lib/db/models/Agent';
-import Policy from '@/lib/db/models/Policy';
-import User from '@/lib/db/models/User';
 import { getFileAgentById } from '@/lib/db/file-agents';
 import { getFilePoliciesByEmail } from '@/lib/db/file-policies';
 import { getDemoPositions } from '@/lib/db/file-demo-transactions';
@@ -26,86 +22,36 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
     return v && ALLOWED_OPS.includes(v) ? v : null;
   };
 
-  let agent: {
-    name: string;
-    walletId?: string | null;
-    walletAddress?: string | null;
-    walletIdObj?: { _id: string; address?: string } | null;
-    demoBalance?: number;
-  } | null = null;
-  let initialPolicy: { dailyLimit: number; weeklyLimit: number; maxPerTransaction: number; allowedOperations: ('buy' | 'sell' | 'swap' | 'hold')[] } | undefined;
-  let id: string;
-
   const paramsRes = await params;
-  id = paramsRes.id;
+  const id = paramsRes.id;
 
-  try {
-    const db = await safeDbConnect();
-    if (db) {
-      const user = await User.findOne({ email: session.user.email });
-      if (user) {
-        const agentDoc = await Agent.findOne({ _id: id, userId: user._id }).populate('walletId').lean();
-        if (agentDoc) {
-          const walletId = agentDoc.walletId as { _id: string; address?: string } | null | undefined;
-          agent = {
-            name: agentDoc.name,
-            walletId: walletId?._id ?? agentDoc.walletId,
-            walletAddress: walletId?.address,
-            walletIdObj: walletId,
-          };
-          const policy = await Policy.findOne({ agentId: id }).lean();
-          initialPolicy = policy
-            ? (() => {
-                const ops = (policy.allowedOperations || [])
-                  .map(mapOp)
-                  .filter(
-                    (o: (typeof ALLOWED_OPS)[number] | null): o is (typeof ALLOWED_OPS)[number] =>
-                      o != null
-                  );
-                return {
-                  dailyLimit: policy.dailyLimit,
-                  weeklyLimit: policy.weeklyLimit,
-                  maxPerTransaction: policy.maxPerTransaction,
-                  allowedOperations: ops.length ? ops : ['buy', 'hold'],
-                };
-              })()
-            : undefined;
-        }
-      }
-    }
-  } catch {
-    // ignore
+  const fileAgent = await getFileAgentById(id, session.user.email);
+  if (!fileAgent) notFound();
+
+  const agent = {
+    name: fileAgent.name,
+    walletId: fileAgent.walletId,
+    walletAddress: fileAgent.walletAddress,
+    demoBalance: fileAgent.demoBalance,
+  };
+
+  const filePolicies = await getFilePoliciesByEmail(session.user.email, id);
+  const fp = filePolicies[0];
+  let initialPolicy: { dailyLimit: number; weeklyLimit: number; maxPerTransaction: number; allowedOperations: ('buy' | 'sell' | 'swap' | 'hold')[] } | undefined;
+  if (fp) {
+    const ops = (fp.allowedOperations || [])
+      .map(mapOp)
+      .filter(
+        (o: (typeof ALLOWED_OPS)[number] | null): o is (typeof ALLOWED_OPS)[number] =>
+          o != null
+      );
+    initialPolicy = {
+      dailyLimit: fp.dailyLimit,
+      weeklyLimit: fp.weeklyLimit,
+      maxPerTransaction: fp.maxPerTransaction,
+      allowedOperations: ops.length ? ops : ['buy', 'hold'],
+    };
   }
-
-  if (!agent) {
-    const fileAgent = await getFileAgentById(id, session.user.email);
-    if (fileAgent) {
-      agent = {
-        name: fileAgent.name,
-        walletId: fileAgent.walletId,
-        walletAddress: fileAgent.walletAddress,
-        demoBalance: fileAgent.demoBalance,
-      };
-      const filePolicies = await getFilePoliciesByEmail(session.user.email, id);
-      const fp = filePolicies[0];
-      if (fp && !initialPolicy) {
-        const ops = (fp.allowedOperations || [])
-          .map(mapOp)
-          .filter(
-            (o: (typeof ALLOWED_OPS)[number] | null): o is (typeof ALLOWED_OPS)[number] =>
-              o != null
-          );
-        initialPolicy = {
-          dailyLimit: fp.dailyLimit,
-          weeklyLimit: fp.weeklyLimit,
-          maxPerTransaction: fp.maxPerTransaction,
-          allowedOperations: ops.length ? ops : ['buy', 'hold'],
-        };
-      }
-    }
-  }
-
-  if (!agent) notFound();
 
   const demoPositions = await getDemoPositions(id!, session.user.email);
 

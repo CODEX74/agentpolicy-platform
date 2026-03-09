@@ -163,7 +163,7 @@ export function AgentWalletCard({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(typeof data?.error === 'string' ? data.error : 'Не удалось отправить. Нужны MongoDB и CDP.');
+        setError(typeof data?.error === 'string' ? data.error : 'Не удалось отправить. Нужны CDP-ключи.');
         return;
       }
       setSendToAddress('');
@@ -230,7 +230,7 @@ export function AgentWalletCard({
             </p>
             <div className="space-y-2 border-t border-zinc-200 pt-4 dark:border-zinc-700">
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Отправить перевод (нужны MongoDB + CDP)
+                Отправить перевод (нужны CDP)
               </label>
               <div className="flex flex-wrap items-end gap-2">
                 <Input

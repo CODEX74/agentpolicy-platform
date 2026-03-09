@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { safeDbConnect } from '@/lib/db/mongoose';
-import Wallet from '@/lib/db/models/Wallet';
-import User from '@/lib/db/models/User';
 import { createFileWallet, setFileWalletAgentId } from '@/lib/db/file-wallets';
 import { updateFileAgentWallet } from '@/lib/db/file-agents';
 import { z } from 'zod';
@@ -35,30 +32,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: message }, { status: 503 });
     }
     const networkId = process.env.NETWORK_ID ?? 'base-sepolia';
-
-    const db = await safeDbConnect();
-    if (db) {
-      try {
-        const user = await User.findOne({ email });
-        if (user) {
-          const wallet = await Wallet.create({
-            userId: user._id,
-            agentId: agentId || undefined,
-            address: result.address,
-            networkId,
-            cdpWalletId: result.walletId,
-            isDefault: false,
-          });
-          if (agentId) {
-            const Agent = (await import('@/lib/db/models/Agent')).default;
-            await Agent.findByIdAndUpdate(agentId, { walletId: wallet._id });
-          }
-          return NextResponse.json(wallet);
-        }
-      } catch {
-        // fallback to file
-      }
-    }
 
     const fileWallet = await createFileWallet({
       userEmail: email,

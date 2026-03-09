@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { safeDbConnect } from '@/lib/db/mongoose';
-import Policy from '@/lib/db/models/Policy';
-import User from '@/lib/db/models/User';
 import { getFilePoliciesByEmail, upsertFilePolicy } from '@/lib/db/file-policies';
 import { z } from 'zod';
 
@@ -43,21 +40,6 @@ export async function GET(req: NextRequest) {
     const email = session.user.email;
     const agentId = req.nextUrl.searchParams.get('agentId') ?? undefined;
 
-    const db = await safeDbConnect();
-    if (db) {
-      try {
-        const user = await User.findOne({ email });
-        if (user) {
-          const filter: { userId: unknown; agentId?: unknown } = { userId: user._id };
-          if (agentId) filter.agentId = agentId;
-          const policies = await Policy.find(filter).populate('agentId').sort({ updatedAt: -1 });
-          return NextResponse.json(policies);
-        }
-      } catch {
-        // fallback to file
-      }
-    }
-
     const filePolicies = await getFilePoliciesByEmail(email, agentId ?? undefined);
     return NextResponse.json(filePolicies);
   } catch (err) {
@@ -75,33 +57,6 @@ export async function POST(req: NextRequest) {
     const email = session.user.email;
     const body = await req.json();
     const data = policySchema.parse(body);
-
-    const db = await safeDbConnect();
-    if (db) {
-      try {
-        const user = await User.findOne({ email });
-        if (user) {
-          const payload: Record<string, unknown> = {
-            ...data,
-            userId: user._id,
-          };
-          if (data.notifications) {
-            payload.notifications = data.notifications;
-          }
-          if (data.timeRestrictions) {
-            payload.timeRestrictions = data.timeRestrictions;
-          }
-          const policy = await Policy.findOneAndUpdate(
-            { agentId: data.agentId, userId: user._id },
-            { $set: payload },
-            { new: true, upsert: true }
-          );
-          return NextResponse.json(policy);
-        }
-      } catch {
-        // fallback to file
-      }
-    }
 
     const filePolicy = await upsertFilePolicy({
       userEmail: email,

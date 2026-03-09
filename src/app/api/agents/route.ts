@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { safeDbConnect } from '@/lib/db/mongoose';
-import Agent from '@/lib/db/models/Agent';
-import User from '@/lib/db/models/User';
 import { getFileAgentsByEmail, createFileAgent } from '@/lib/db/file-agents';
 import { PRICING_PLANS } from '@/lib/constants/pricing';
 import { z } from 'zod';
@@ -21,19 +18,6 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const email = session.user.email;
-
-    const db = await safeDbConnect();
-    if (db) {
-      try {
-        const user = await User.findOne({ email });
-        if (user) {
-          const agents = await Agent.find({ userId: user._id }).populate('walletId').sort({ createdAt: -1 });
-          return NextResponse.json(agents);
-        }
-      } catch {
-        // fallback to file
-      }
-    }
 
     const fileAgents = await getFileAgentsByEmail(email);
     return NextResponse.json(fileAgents);
@@ -59,33 +43,6 @@ export async function POST(req: NextRequest) {
     const limit = getAgentsLimit(planId);
     const body = await req.json();
     const data = createAgentSchema.parse(body);
-
-    const db = await safeDbConnect();
-    if (db) {
-      try {
-        const user = await User.findOne({ email });
-        if (user) {
-          if (limit !== -1) {
-            const count = await Agent.countDocuments({ userId: user._id });
-            if (count >= limit) {
-              return NextResponse.json(
-                { error: 'Достигнут лимит агентов по вашему тарифу' },
-                { status: 403 }
-              );
-            }
-          }
-          const agent = await Agent.create({
-            userId: user._id,
-            name: data.name,
-            description: data.description,
-            moltbookId: data.moltbookId,
-          });
-          return NextResponse.json(agent);
-        }
-      } catch {
-        // fallback to file
-      }
-    }
 
     if (limit !== -1) {
       const fileAgents = await getFileAgentsByEmail(email);

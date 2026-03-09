@@ -1,12 +1,10 @@
-import type { Types } from 'mongoose';
-
 export interface IAgent {
-  _id: Types.ObjectId;
-  userId: Types.ObjectId;
+  _id: string;
+  userId: string;
   name: string;
   description?: string;
   moltbookId?: string | null;
-  walletId?: Types.ObjectId | null;
+  walletId?: string | null;
   isActive: boolean;
   metadata?: Record<string, unknown>;
   createdAt: Date;

@@ -43,7 +43,7 @@ export default async function TransactionsPage() {
               </li>
             </ol>
             <p>
-              Нужны: подключённая MongoDB, пользователь в БД, кошелёк в системе и ключи CDP в <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-700">.env.local</code>. После первой успешной операции запись появится в таблице выше.
+              Демо-транзакции агентов отображаются выше. Для реальных переводов нужны CDP-ключи в <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-700">.env.local</code>.
             </p>
             <p>
               <Link href="/dashboard/agents" className="underline hover:no-underline">

@@ -1,5 +1,3 @@
-import type { Types } from 'mongoose';
-
 export interface TimeRestrictions {
   enabled: boolean;
   startHour: number;
@@ -15,9 +13,9 @@ export interface PolicyNotifications {
 }
 
 export interface IPolicy {
-  _id: Types.ObjectId;
-  userId: Types.ObjectId;
-  agentId: Types.ObjectId;
+  _id: string;
+  userId: string;
+  agentId: string;
   name: string;
   dailyLimit: number;
   weeklyLimit: number;

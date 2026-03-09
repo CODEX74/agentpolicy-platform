@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { safeDbConnect } from '@/lib/db/mongoose';
-import Agent from '@/lib/db/models/Agent';
-import Wallet from '@/lib/db/models/Wallet';
-import User from '@/lib/db/models/User';
 import { getFileAgentById, updateFileAgentWallet } from '@/lib/db/file-agents';
 import { getFileWalletById, setFileWalletAgentId } from '@/lib/db/file-wallets';
 import { z } from 'zod';
@@ -26,31 +22,6 @@ export async function PUT(
     const { id: agentId } = await params;
     const body = await req.json();
     const { walletId } = bodySchema.parse(body);
-
-    const db = await safeDbConnect();
-    if (db) {
-      try {
-        const user = await User.findOne({ email });
-        if (user) {
-          const agent = await Agent.findOne({ _id: agentId, userId: user._id });
-          if (!agent) return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
-          const wallet = await Wallet.findOne({ _id: walletId, userId: user._id });
-          if (!wallet) return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
-
-          const previousWalletId = agent.walletId?.toString();
-          if (previousWalletId && previousWalletId !== walletId) {
-            await Wallet.findByIdAndUpdate(previousWalletId, { agentId: null });
-          }
-          agent.walletId = wallet._id;
-          await agent.save();
-          await Wallet.findByIdAndUpdate(walletId, { agentId: agent._id });
-          const updated = await Agent.findById(agentId).populate('walletId').lean();
-          return NextResponse.json(updated);
-        }
-      } catch {
-        // fallback to file
-      }
-    }
 
     const fileAgent = await getFileAgentById(agentId, email);
     if (!fileAgent) return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
@@ -83,27 +54,6 @@ export async function DELETE(
     }
     const email = session.user.email;
     const { id: agentId } = await params;
-
-    const db = await safeDbConnect();
-    if (db) {
-      try {
-        const user = await User.findOne({ email });
-        if (user) {
-          const agent = await Agent.findOne({ _id: agentId, userId: user._id });
-          if (!agent) return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
-          const walletId = agent.walletId?.toString();
-          if (walletId) {
-            await Wallet.findByIdAndUpdate(walletId, { agentId: null });
-            agent.walletId = undefined;
-            await agent.save();
-          }
-          const updated = await Agent.findById(agentId).populate('walletId').lean();
-          return NextResponse.json(updated);
-        }
-      } catch {
-        // fallback to file
-      }
-    }
 
     const fileAgent = await getFileAgentById(agentId, email);
     if (!fileAgent) return NextResponse.json({ error: 'Agent not found' }, { status: 404 });

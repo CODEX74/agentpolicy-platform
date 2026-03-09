@@ -49,7 +49,7 @@ export default function LoginPage() {
       setError('Неверный email или пароль. Зарегистрируйтесь, если ещё нет аккаунта.');
     } catch (err) {
       if (err instanceof Error && err.message === 'timeout') {
-        setError('Сервер не отвечает. Проверьте, что MongoDB запущена и MONGODB_URI указан в .env.local');
+        setError('Сервер не отвечает. Проверьте подключение к интернету.');
       } else {
         setError('Ошибка входа. Проверьте подключение к базе данных.');
       }

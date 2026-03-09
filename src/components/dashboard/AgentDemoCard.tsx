@@ -158,7 +158,7 @@ export function AgentDemoCard({ agentId }: AgentDemoCardProps) {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            Демо-баланс и автономные решения ИИ доступны только для агентов с локальным хранилищем (без MongoDB).
+            Демо-баланс и автономные решения ИИ работают с файловым хранилищем.
           </p>
         </CardContent>
       </Card>

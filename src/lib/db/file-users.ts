@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -69,6 +70,37 @@ export async function createFileUser(params: {
   users.push(user);
   await writeUsers(users);
   return user;
+}
+
+/** Создать или обновить пользователя при OAuth (Google и т.д.). Пароль — случайный, вход только через провайдера. */
+export async function upsertFileUserFromOAuth(params: {
+  email: string;
+  name: string;
+}): Promise<FileUser> {
+  const users = await readUsers();
+  const lower = params.email.toLowerCase().trim();
+  const existing = users.findIndex((u) => u.email.toLowerCase() === lower);
+  const id = existing >= 0 ? users[existing].id : `file-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const now = new Date().toISOString();
+  const randomPassword = `oauth-${crypto.randomBytes(32).toString('hex')}`;
+  const user: FileUser = {
+    id,
+    email: lower,
+    name: params.name.trim() || lower.split('@')[0],
+    password: randomPassword,
+    telegramId: existing >= 0 ? (users[existing].telegramId ?? null) : null,
+    openaiApiKey: existing >= 0 ? (users[existing].openaiApiKey ?? null) : null,
+    plan: existing >= 0 ? (users[existing].plan ?? 'free') : 'free',
+    subscriptionExpiresAt: existing >= 0 ? users[existing].subscriptionExpiresAt ?? null : null,
+    createdAt: existing >= 0 ? users[existing].createdAt : now,
+  };
+  if (existing >= 0) {
+    users[existing] = { ...users[existing], name: user.name };
+  } else {
+    users.push(user);
+  }
+  await writeUsers(users);
+  return existing >= 0 ? users[existing] : user;
 }
 
 /** Создать или обновить пользователя (для сида премиум-аккаунтов). */

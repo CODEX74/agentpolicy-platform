@@ -101,9 +101,8 @@ export default function RegisterPage() {
             <div className="text-sm text-red-600 bg-red-50 dark:bg-red-950/50 p-3 rounded-lg space-y-2">
               <p>{error}</p>
               <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                1) Создайте файл .env.local из .env.example и укажите MONGODB_URI.<br />
-                2) Запустите MongoDB (локально или Docker: docker run -d -p 27017:27017 mongo).<br />
-                3) Проверьте: <a href="/api/health" target="_blank" rel="noopener noreferrer" className="underline">/api/health</a>
+                1) Проверьте подключение к интернету.<br />
+                2) Проверьте: <a href="/api/health" target="_blank" rel="noopener noreferrer" className="underline">/api/health</a>
               </p>
             </div>
           )}

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { createFileWallet, setFileWalletAgentId } from '@/lib/db/file-wallets';
-import { updateFileAgentWallet } from '@/lib/db/file-agents';
+import { prisma } from '@/lib/db/prisma';
 import { z } from 'zod';
 
 const createSchema = z.object({
@@ -32,19 +31,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: message }, { status: 503 });
     }
     const networkId = process.env.NETWORK_ID ?? 'base-sepolia';
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    const fileWallet = await createFileWallet({
-      userEmail: email,
-      address: result.address,
-      agentId: agentId ?? null,
-      networkId,
-      cdpWalletId: result.walletId,
+    const wallet = await prisma.wallet.create({
+      data: {
+        userId: user.id,
+        address: result.address,
+        agentId: agentId ?? undefined,
+        networkId,
+        cdpWalletId: result.walletId,
+      },
     });
     if (agentId) {
-      await setFileWalletAgentId(fileWallet._id, email, agentId);
-      await updateFileAgentWallet(agentId, email, fileWallet._id, fileWallet.address);
+      await prisma.agent.updateMany({
+        where: { id: agentId, userId: user.id },
+        data: { walletId: wallet.id, walletAddress: wallet.address },
+      });
     }
-    return NextResponse.json(fileWallet);
+    return NextResponse.json({
+      _id: wallet.id,
+      userEmail: email,
+      agentId: wallet.agentId,
+      address: wallet.address,
+      networkId: wallet.networkId,
+      cdpWalletId: wallet.cdpWalletId,
+      isDefault: wallet.isDefault,
+      createdAt: wallet.createdAt.toISOString(),
+      updatedAt: wallet.updatedAt.toISOString(),
+    });
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: err.flatten() }, { status: 400 });

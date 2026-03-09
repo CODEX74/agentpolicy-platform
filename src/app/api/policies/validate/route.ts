@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { getFilePoliciesByEmail } from '@/lib/db/file-policies';
-import { getDemoSpentToday } from '@/lib/db/file-demo-transactions';
+import { prisma } from '@/lib/db/prisma';
+import { getDemoSpentToday } from '@/lib/db/demo-transactions';
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,8 +16,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'agentId and transaction (amount, to) required' }, { status: 400 });
     }
 
-    const policies = await getFilePoliciesByEmail(session.user.email, agentId);
-    const policy = policies.find((p) => p.agentId === agentId);
+    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    const policy = await prisma.policy.findUnique({
+      where: { userId_agentId: { userId: user.id, agentId } },
+    });
     if (!policy) {
       return NextResponse.json({ allowed: true });
     }
@@ -40,12 +43,13 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (policy.timeRestrictions?.enabled) {
+    const timeRestrictions = policy.timeRestrictions as { enabled?: boolean; startHour?: number; endHour?: number } | null;
+    if (timeRestrictions?.enabled) {
       const now = new Date();
       const currentHour = now.getHours();
       if (
-        currentHour < policy.timeRestrictions.startHour ||
-        currentHour > policy.timeRestrictions.endHour
+        currentHour < (timeRestrictions.startHour ?? 0) ||
+        currentHour > (timeRestrictions.endHour ?? 23)
       ) {
         return NextResponse.json({
           allowed: false,

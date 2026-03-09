@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { getFileAgentById, setFileAgentDemoBalance } from '@/lib/db/file-agents';
-import { getDemoPositions } from '@/lib/db/file-demo-transactions';
+import { prisma } from '@/lib/db/prisma';
+import { getDemoPositions } from '@/lib/db/demo-transactions';
 import { z } from 'zod';
 
-// Ensure this route runs on the Node.js runtime (not Edge) to be compatible with next-auth
 export const runtime = 'nodejs';
 
 const bodySchema = z.object({
@@ -22,8 +21,15 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const { id } = await params;
-    const agent = await getFileAgentById(id, session.user.email);
+
+    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    const agent = await prisma.agent.findFirst({
+      where: { id, userId: user.id },
+    });
     if (!agent) return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+
     const positions = await getDemoPositions(id, session.user.email);
     return NextResponse.json({
       demoBalance: agent.demoBalance ?? 0,
@@ -48,9 +54,23 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
     const { demoBalance } = bodySchema.parse(body);
-    const agent = await setFileAgentDemoBalance(id, session.user.email, demoBalance);
+
+    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    const agent = await prisma.agent.findFirst({
+      where: { id, userId: user.id },
+    });
     if (!agent) return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
-    return NextResponse.json({ demoBalance: agent.demoBalance ?? 0 });
+
+    const updated = await prisma.agent.update({
+      where: { id },
+      data: {
+        demoBalance,
+        initialDemoBalance: demoBalance,
+      },
+    });
+    return NextResponse.json({ demoBalance: updated.demoBalance ?? 0 });
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: err.flatten() }, { status: 400 });

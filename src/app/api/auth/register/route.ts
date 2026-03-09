@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createFileUser } from '@/lib/db/file-users';
+import { prisma } from '@/lib/db/prisma';
 import { hashPassword } from '@/lib/auth/password';
 import { z } from 'zod';
 
@@ -18,14 +18,21 @@ export async function POST(req: NextRequest) {
     const email = data.email.toLowerCase();
     const name = data.name ?? data.email.split('@')[0];
 
-    await createFileUser({ email, name, password: hashed });
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return NextResponse.json(
+        { error: 'Пользователь с таким email уже зарегистрирован' },
+        { status: 400 }
+      );
+    }
+
+    await prisma.user.create({
+      data: { email, name, password: hashed },
+    });
     return NextResponse.json({ ok: true });
   } catch (e) {
     if (e instanceof z.ZodError) {
       return NextResponse.json({ error: e.flatten() }, { status: 400 });
-    }
-    if (e instanceof Error && e.message.includes('уже зарегистрирован')) {
-      return NextResponse.json({ error: e.message }, { status: 400 });
     }
     console.error('Register error:', e);
     return NextResponse.json(

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { getFileWalletByAddress } from '@/lib/db/file-wallets';
+import { prisma } from '@/lib/db/prisma';
 
 export async function GET(req: NextRequest) {
   try {
@@ -15,7 +15,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'address is required' }, { status: 400 });
     }
 
-    const wallet = await getFileWalletByAddress(address.toLowerCase(), session.user.email);
+    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    const wallet = await prisma.wallet.findUnique({
+      where: { userId_address: { userId: user.id, address: address.toLowerCase() } },
+    });
     if (!wallet) {
       return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
     }

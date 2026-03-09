@@ -1,16 +1,20 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
+import { prisma } from '@/lib/db/prisma';
 
 export async function GET() {
   try {
-    const dataDir = path.join(process.cwd(), 'data');
-    await fs.mkdir(dataDir, { recursive: true });
+    if (!process.env.DATABASE_URL) {
+      return NextResponse.json(
+        { ok: false, error: 'DATABASE_URL не задан' },
+        { status: 503 }
+      );
+    }
+    await prisma.$queryRaw`SELECT 1`;
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error('Health check failed:', e);
     return NextResponse.json(
-      { ok: false, error: 'Не удалось проверить хранилище' },
+      { ok: false, error: 'Не удалось подключиться к Postgres' },
       { status: 503 }
     );
   }

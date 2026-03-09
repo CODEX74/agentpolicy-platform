@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFileAgentsByEmail } from '@/lib/db/file-agents';
-import { getFilePoliciesByEmail } from '@/lib/db/file-policies';
-import { getDemoSpentToday } from '@/lib/db/file-demo-transactions';
+import { prisma } from '@/lib/db/prisma';
+import { getDemoSpentToday } from '@/lib/db/demo-transactions';
 
 /**
  * Текст сообщения «оставшийся дневной лимит» по агентам.
@@ -17,7 +16,11 @@ export async function GET(req: NextRequest) {
   if (!userEmail) {
     return NextResponse.json({ text: 'Задайте TELEGRAM_USER_EMAIL в .env.local' });
   }
-  const agents = await getFileAgentsByEmail(userEmail);
+  const user = await prisma.user.findUnique({
+    where: { email: userEmail },
+    include: { agents: true },
+  });
+  const agents = user?.agents ?? [];
   if (agents.length === 0) {
     return NextResponse.json({
       text: '📅 Оставшийся дневной лимит\n\nНет агентов. Создайте агента на сайте и настройте политику.',
@@ -25,9 +28,11 @@ export async function GET(req: NextRequest) {
   }
   const lines = ['📅 Оставшийся дневной лимит', ''];
   for (const agent of agents) {
-    const [policies] = await getFilePoliciesByEmail(userEmail, agent._id);
-    const dailyLimit = policies?.dailyLimit ?? -1;
-    const spentToday = await getDemoSpentToday(agent._id, userEmail);
+    const policy = await prisma.policy.findUnique({
+      where: { userId_agentId: { userId: user!.id, agentId: agent.id } },
+    });
+    const dailyLimit = policy?.dailyLimit ?? -1;
+    const spentToday = await getDemoSpentToday(agent.id, userEmail);
     if (dailyLimit < 0) {
       lines.push(`• ${agent.name}: без лимита (потрачено сегодня: ${spentToday.toFixed(2)} USDT)`);
     } else {

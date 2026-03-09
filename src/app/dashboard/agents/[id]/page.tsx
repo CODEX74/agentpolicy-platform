@@ -7,9 +7,8 @@ import { PolicyBuilder } from '@/components/dashboard/PolicyBuilder';
 import { AgentWalletCard } from '@/components/dashboard/AgentWalletCard';
 import { AgentDemoCard } from '@/components/dashboard/AgentDemoCard';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
-import { getFileAgentById } from '@/lib/db/file-agents';
-import { getFilePoliciesByEmail } from '@/lib/db/file-policies';
-import { getDemoPositions } from '@/lib/db/file-demo-transactions';
+import { prisma } from '@/lib/db/prisma';
+import { getDemoPositions } from '@/lib/db/demo-transactions';
 
 export default async function AgentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
@@ -25,18 +24,24 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
   const paramsRes = await params;
   const id = paramsRes.id;
 
-  const fileAgent = await getFileAgentById(id, session.user.email);
-  if (!fileAgent) notFound();
+  const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+  if (!user) redirect('/');
+  const agentRow = await prisma.agent.findFirst({
+    where: { id, userId: user.id },
+  });
+  if (!agentRow) notFound();
 
   const agent = {
-    name: fileAgent.name,
-    walletId: fileAgent.walletId,
-    walletAddress: fileAgent.walletAddress,
-    demoBalance: fileAgent.demoBalance,
+    name: agentRow.name,
+    walletId: agentRow.walletId,
+    walletAddress: agentRow.walletAddress,
+    demoBalance: agentRow.demoBalance,
   };
 
-  const filePolicies = await getFilePoliciesByEmail(session.user.email, id);
-  const fp = filePolicies[0];
+  const policyRow = await prisma.policy.findUnique({
+    where: { userId_agentId: { userId: user.id, agentId: id } },
+  });
+  const fp = policyRow;
   let initialPolicy: { dailyLimit: number; weeklyLimit: number; maxPerTransaction: number; allowedOperations: ('buy' | 'sell' | 'swap' | 'hold')[] } | undefined;
   if (fp) {
     const ops = (fp.allowedOperations || [])

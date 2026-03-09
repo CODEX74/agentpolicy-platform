@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFileAgentsByEmail, resetAgentsDemoBalanceForUser } from '@/lib/db/file-agents';
-import { getFilePoliciesByEmail } from '@/lib/db/file-policies';
-import { deleteDemoTransactionsByEmail, getDemoPositions, getDemoSpentToday } from '@/lib/db/file-demo-transactions';
+import { prisma } from '@/lib/db/prisma';
+import { deleteDemoTransactionsByEmail, getDemoPositions, getDemoSpentToday } from '@/lib/db/demo-transactions';
 import { getMarketPrices } from '@/lib/ai/agent-trader';
 import { sendTelegramMessageToChat } from '@/lib/telegram';
 import { getEmailByTelegramId } from '@/lib/db/user-telegram';
@@ -143,7 +142,17 @@ export async function POST(req: NextRequest) {
       if (!r1.ok) console.error('[Telegram webhook] /resetbalance first message failed:', r1.error);
       try {
         const deleted = await deleteDemoTransactionsByEmail(userEmail);
-        await resetAgentsDemoBalanceForUser(userEmail);
+        const user = await prisma.user.findUnique({ where: { email: userEmail } });
+        if (user) {
+          const agents = await prisma.agent.findMany({ where: { userId: user.id } });
+          for (const a of agents) {
+            const target = a.initialDemoBalance ?? a.demoBalance ?? 0;
+            await prisma.agent.update({
+              where: { id: a.id },
+              data: { demoBalance: target, initialDemoBalance: a.initialDemoBalance ?? a.demoBalance },
+            });
+          }
+        }
         const r2 = await sendTelegramMessageToChat(
           `Демо сброшено. Удалено транзакций: ${deleted}. Балансы агентов восстановлены до изначальных (как на сайте). Данные на сайте обновлены.`,
           chatIdStr
@@ -170,7 +179,11 @@ export async function POST(req: NextRequest) {
       }
       await sendTelegramMessageToChat('Проверяю лимиты…', chatIdStr);
       try {
-        const agents = await getFileAgentsByEmail(userEmail);
+        const user = await prisma.user.findUnique({
+          where: { email: userEmail },
+          include: { agents: true },
+        });
+        const agents = user?.agents ?? [];
         if (agents.length === 0) {
           await sendTelegramMessageToChat(
             '📅 Оставшийся дневной лимит\n\nНет агентов. Создайте агента на сайте и настройте политику.',
@@ -180,9 +193,11 @@ export async function POST(req: NextRequest) {
         }
         const lines = ['📅 Оставшийся дневной лимит', ''];
         for (const agent of agents) {
-          const [policies] = await getFilePoliciesByEmail(userEmail, agent._id);
-          const dailyLimit = policies?.dailyLimit ?? -1;
-          const spentToday = await getDemoSpentToday(agent._id, userEmail);
+          const policy = await prisma.policy.findUnique({
+            where: { userId_agentId: { userId: user!.id, agentId: agent.id } },
+          });
+          const dailyLimit = policy?.dailyLimit ?? -1;
+          const spentToday = await getDemoSpentToday(agent.id, userEmail);
           if (dailyLimit < 0) {
             lines.push(`• ${agent.name}: без лимита (потрачено сегодня: ${spentToday.toFixed(2)} USDT)`);
           } else {
@@ -219,17 +234,22 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ok: true });
       }
 
-      const [agents, marketPrices] = await Promise.all([
-        getFileAgentsByEmail(userEmail),
+      const [userData, marketPrices] = await Promise.all([
+        prisma.user.findUnique({
+          where: { email: userEmail },
+          include: { agents: true },
+        }),
         getMarketPrices(),
       ]);
+      const agents = userData?.agents ?? [];
+      const agentsForMsg = agents.map((a) => ({ _id: a.id, name: a.name, demoBalance: a.demoBalance ?? 0 }));
       const positionsByAgentId = new Map<string, { asset: string; quantity: number; avgPriceUsd: number; totalUsdSpent: number }[]>();
       for (const agent of agents) {
-        const positions = await getDemoPositions(agent._id, userEmail);
-        positionsByAgentId.set(agent._id, positions);
+        const positions = await getDemoPositions(agent.id, userEmail);
+        positionsByAgentId.set(agent.id, positions);
       }
 
-      const message = formatBalanceMessage(agents, positionsByAgentId, marketPrices);
+      const message = formatBalanceMessage(agentsForMsg, positionsByAgentId, marketPrices);
       await sendTelegramMessageToChat(message, chatIdStr);
       return NextResponse.json({ ok: true });
     }

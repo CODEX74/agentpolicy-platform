@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { getDemoTransactionsByEmail } from '@/lib/db/file-demo-transactions';
+import { getDemoTransactionsByEmail } from '@/lib/db/demo-transactions';
 
 const DAYS_BACK = 14;
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFileAgentsByEmail } from '@/lib/db/file-agents';
-import { getDemoPositions } from '@/lib/db/file-demo-transactions';
+import { prisma } from '@/lib/db/prisma';
+import { getDemoPositions } from '@/lib/db/demo-transactions';
 import { getMarketPrices } from '@/lib/ai/agent-trader';
 
 /**
@@ -19,14 +19,18 @@ export async function GET(req: NextRequest) {
   if (!userEmail) {
     return NextResponse.json({ text: 'Задайте TELEGRAM_USER_EMAIL в .env.local' });
   }
-  const [agents, marketPrices] = await Promise.all([
-    getFileAgentsByEmail(userEmail),
+  const [userData, marketPrices] = await Promise.all([
+    prisma.user.findUnique({
+      where: { email: userEmail },
+      include: { agents: true },
+    }),
     getMarketPrices(),
   ]);
+  const agents = userData?.agents ?? [];
   const positionsByAgentId = new Map<string, { asset: string; quantity: number; avgPriceUsd: number; totalUsdSpent: number }[]>();
   for (const agent of agents) {
-    const positions = await getDemoPositions(agent._id, userEmail);
-    positionsByAgentId.set(agent._id, positions);
+    const positions = await getDemoPositions(agent.id, userEmail);
+    positionsByAgentId.set(agent.id, positions);
   }
   const lines = ['💰 Демо-баланс', ''];
   if (agents.length === 0) {
@@ -36,7 +40,7 @@ export async function GET(req: NextRequest) {
   for (const agent of agents) {
     const balance = agent.demoBalance ?? 0;
     totalUsdt += balance;
-    const positions = positionsByAgentId.get(agent._id) ?? [];
+    const positions = positionsByAgentId.get(agent.id) ?? [];
     lines.push(`• ${agent.name}`);
     lines.push(`  USDT: ${balance}`);
     lines.push('  Позиции:');

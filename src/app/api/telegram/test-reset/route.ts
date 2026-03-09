@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resetAgentsDemoBalanceForUser } from '@/lib/db/file-agents';
-import { deleteDemoTransactionsByEmail } from '@/lib/db/file-demo-transactions';
+import { resetAgentsDemoBalanceForUser, deleteDemoTransactionsByEmail } from '@/lib/db/demo-transactions';
 import { sendTelegramMessageToChat } from '@/lib/telegram';
 
 /**

@@ -3,18 +3,18 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { SettingsForm } from '@/components/dashboard/SettingsForm';
-import { getFileUserByEmail } from '@/lib/db/file-users';
+import { prisma } from '@/lib/db/prisma';
 
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) redirect('/');
 
   const email = session.user.email;
-  const fileUser = await getFileUserByEmail(email);
-  const name = fileUser?.name || session.user.name || email.split('@')[0];
-  const plan = fileUser?.plan ?? 'free';
+  const user = await prisma.user.findUnique({ where: { email } });
+  const name = user?.name || session.user.name || email.split('@')[0];
+  const plan = user?.plan ?? 'free';
   const canChangePlan = true;
-  const telegramId = (fileUser?.telegramId as string | null | undefined) ?? null;
+  const telegramId = (user?.telegramId as string | null | undefined) ?? null;
 
   return (
     <DashboardLayout>

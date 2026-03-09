@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { createFileWallet, getFileWalletByAddress, setFileWalletAgentId } from '@/lib/db/file-wallets';
-import { updateFileAgentWallet } from '@/lib/db/file-agents';
+import { prisma } from '@/lib/db/prisma';
 import { z } from 'zod';
 
 const ethAddressRe = /^0x[a-fA-F0-9]{40}$/;
@@ -22,28 +21,61 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { address, agentId } = bodySchema.parse(body);
     const normalizedAddress = address.trim().toLowerCase();
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    const existingFile = await getFileWalletByAddress(normalizedAddress, email);
-    if (existingFile) {
+    const existing = await prisma.wallet.findUnique({
+      where: { userId_address: { userId: user.id, address: normalizedAddress } },
+    });
+    if (existing) {
       if (agentId) {
-        await setFileWalletAgentId(existingFile._id, email, agentId);
-        await updateFileAgentWallet(agentId, email, existingFile._id, existingFile.address);
+        await prisma.wallet.update({
+          where: { id: existing.id },
+          data: { agentId },
+        });
+        await prisma.agent.updateMany({
+          where: { id: agentId, userId: user.id },
+          data: { walletId: existing.id, walletAddress: existing.address },
+        });
       }
-      return NextResponse.json(existingFile);
+      return NextResponse.json({
+        _id: existing.id,
+        userEmail: email,
+        agentId: existing.agentId,
+        address: existing.address,
+        networkId: existing.networkId,
+        cdpWalletId: existing.cdpWalletId,
+        isDefault: existing.isDefault,
+        createdAt: existing.createdAt.toISOString(),
+        updatedAt: existing.updatedAt.toISOString(),
+      });
     }
 
-    const fileWallet = await createFileWallet({
-      userEmail: email,
-      address: normalizedAddress,
-      agentId: agentId ?? null,
-      networkId: process.env.NETWORK_ID ?? 'base-sepolia',
-      cdpWalletId: null,
+    const wallet = await prisma.wallet.create({
+      data: {
+        userId: user.id,
+        address: normalizedAddress,
+        agentId: agentId ?? undefined,
+        networkId: process.env.NETWORK_ID ?? 'base-sepolia',
+      },
     });
     if (agentId) {
-      await setFileWalletAgentId(fileWallet._id, email, agentId);
-      await updateFileAgentWallet(agentId, email, fileWallet._id, fileWallet.address);
+      await prisma.agent.updateMany({
+        where: { id: agentId, userId: user.id },
+        data: { walletId: wallet.id, walletAddress: wallet.address },
+      });
     }
-    return NextResponse.json(fileWallet);
+    return NextResponse.json({
+      _id: wallet.id,
+      userEmail: email,
+      agentId: wallet.agentId,
+      address: wallet.address,
+      networkId: wallet.networkId,
+      cdpWalletId: wallet.cdpWalletId,
+      isDefault: wallet.isDefault,
+      createdAt: wallet.createdAt.toISOString(),
+      updatedAt: wallet.updatedAt.toISOString(),
+    });
   } catch (err) {
     if (err instanceof z.ZodError) {
       const msg = err.errors.map((e) => e.message).join('; ');

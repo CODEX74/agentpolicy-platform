@@ -1,7 +1,8 @@
 import type { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
-import { getFileUserByEmail, upsertFileUserFromOAuth } from '@/lib/db/file-users';
+import { PrismaAdapter } from '@next-auth/prisma-adapter';
+import { prisma } from '@/lib/db/prisma';
 import { verifyPassword } from './password';
 
 const providers: NextAuthOptions['providers'] = [
@@ -15,17 +16,17 @@ const providers: NextAuthOptions['providers'] = [
       if (!credentials?.email || !credentials?.password) return null;
       const email = credentials.email.toLowerCase();
 
-      const fileUser = await getFileUserByEmail(email);
-      if (fileUser) {
-        const ok = verifyPassword(credentials.password, fileUser.password);
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (user?.password) {
+        const ok = verifyPassword(credentials.password, user.password);
         if (ok) {
           return {
-            id: fileUser.id,
-            email: fileUser.email,
-            name: fileUser.name,
-            image: '',
-            plan: fileUser.plan ?? 'free',
-            subscriptionExpiresAt: fileUser.subscriptionExpiresAt ?? null,
+            id: user.id,
+            email: user.email ?? undefined,
+            name: user.name ?? undefined,
+            image: user.image ?? undefined,
+            plan: user.plan ?? 'free',
+            subscriptionExpiresAt: user.subscriptionExpiresAt,
           };
         }
       }
@@ -44,19 +45,10 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 }
 
 export const authOptions: NextAuthOptions = {
+  adapter: PrismaAdapter(prisma),
   session: { strategy: 'jwt', maxAge: 30 * 24 * 60 * 60 },
   pages: { signIn: '/login', error: '/login' },
   providers,
-  events: {
-    async signIn({ user, account }) {
-      if (account?.provider === 'google' && user?.email) {
-        await upsertFileUserFromOAuth({
-          email: user.email,
-          name: user.name ?? user.email.split('@')[0],
-        });
-      }
-    },
-  },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {

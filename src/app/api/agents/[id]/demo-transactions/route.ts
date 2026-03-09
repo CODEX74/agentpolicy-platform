@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { getDemoTransactionsByAgent } from '@/lib/db/file-demo-transactions';
+import { getDemoTransactionsByAgent } from '@/lib/db/demo-transactions';
 
 export const runtime = 'nodejs';
 

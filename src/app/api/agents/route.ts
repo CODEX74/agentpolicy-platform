@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { getFileAgentsByEmail, createFileAgent } from '@/lib/db/file-agents';
+import { prisma } from '@/lib/db/prisma';
 import { PRICING_PLANS } from '@/lib/constants/pricing';
 import { z } from 'zod';
 
@@ -11,16 +11,37 @@ const createAgentSchema = z.object({
   moltbookId: z.string().optional(),
 });
 
+function toAgentResponse(a: { id: string; userId: string; name: string; description: string | null; isActive: boolean; walletId: string | null; walletAddress: string | null; demoBalance: number | null; initialDemoBalance: number | null; run24_7: boolean; createdAt: Date; updatedAt: Date }) {
+  return {
+    _id: a.id,
+    userEmail: '', // not needed for list
+    name: a.name,
+    description: a.description ?? '',
+    isActive: a.isActive,
+    walletId: a.walletId ?? undefined,
+    walletAddress: a.walletAddress ?? undefined,
+    demoBalance: a.demoBalance ?? undefined,
+    initialDemoBalance: a.initialDemoBalance ?? undefined,
+    run24_7: a.run24_7,
+    createdAt: a.createdAt.toISOString(),
+    updatedAt: a.updatedAt.toISOString(),
+  };
+}
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const email = session.user.email;
 
-    const fileAgents = await getFileAgentsByEmail(email);
-    return NextResponse.json(fileAgents);
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      include: { agents: { orderBy: { createdAt: 'desc' } } },
+    });
+    if (!user) return NextResponse.json([]);
+
+    return NextResponse.json(user.agents.map(toAgentResponse));
   } catch (err) {
     console.error('GET /api/agents', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -44,22 +65,27 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = createAgentSchema.parse(body);
 
-    if (limit !== -1) {
-      const fileAgents = await getFileAgentsByEmail(email);
-      if (fileAgents.length >= limit) {
-        return NextResponse.json(
-          { error: 'Достигнут лимит агентов по вашему тарифу' },
-          { status: 403 }
-        );
-      }
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: { agents: true },
+    });
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    if (limit !== -1 && user.agents.length >= limit) {
+      return NextResponse.json(
+        { error: 'Достигнут лимит агентов по вашему тарифу' },
+        { status: 403 }
+      );
     }
 
-    const fileAgent = await createFileAgent({
-      userEmail: email,
-      name: data.name,
-      description: data.description,
+    const agent = await prisma.agent.create({
+      data: {
+        userId: user.id,
+        name: data.name,
+        description: data.description ?? '',
+      },
     });
-    return NextResponse.json(fileAgent);
+    return NextResponse.json(toAgentResponse(agent));
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: err.flatten() }, { status: 400 });

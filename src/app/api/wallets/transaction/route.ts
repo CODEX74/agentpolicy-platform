@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { getFileWalletByAddress } from '@/lib/db/file-wallets';
+import { prisma } from '@/lib/db/prisma';
 import { z } from 'zod';
 
 const sendSchema = z.object({
@@ -21,10 +21,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = sendSchema.parse(body);
 
-    const wallet = await getFileWalletByAddress(
-      data.fromAddress.toLowerCase(),
-      session.user.email
-    );
+    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    const wallet = await prisma.wallet.findUnique({
+      where: { userId_address: { userId: user.id, address: data.fromAddress.toLowerCase() } },
+    });
     if (!wallet) {
       return NextResponse.json({ error: 'Wallet not found' }, { status: 404 });
     }

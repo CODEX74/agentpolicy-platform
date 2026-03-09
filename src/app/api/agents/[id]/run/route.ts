@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { getFileAgentById } from '@/lib/db/file-agents';
+import { prisma } from '@/lib/db/prisma';
 import { runAgentOnce } from '@/lib/agent-run';
 
 export async function POST(
@@ -16,7 +16,11 @@ export async function POST(
     const email = session.user.email;
     const { id: agentId } = await params;
 
-    const agent = await getFileAgentById(agentId, email);
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    const agent = await prisma.agent.findFirst({
+      where: { id: agentId, userId: user.id },
+    });
     if (!agent) return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
 
     const balance = agent.demoBalance ?? 0;

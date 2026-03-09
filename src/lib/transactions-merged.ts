@@ -1,4 +1,4 @@
-import { getDemoTransactionsByEmail } from '@/lib/db/file-demo-transactions';
+import { getDemoTransactionsByEmail } from '@/lib/db/demo-transactions';
 
 export interface UnifiedTransaction {
   _id: string;

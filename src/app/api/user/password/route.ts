@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { getFileUserByEmail, updateFileUserPassword } from '@/lib/db/file-users';
+import { prisma } from '@/lib/db/prisma';
 import { verifyPassword, hashPassword } from '@/lib/auth/password';
 import { z } from 'zod';
 
@@ -20,17 +20,20 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json();
     const { currentPassword, newPassword } = bodySchema.parse(body);
 
-    const fileUser = await getFileUserByEmail(email);
-    if (!fileUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    if (fileUser.password.startsWith('oauth-')) {
+    if (!user.password) {
       return NextResponse.json({ error: 'Вход выполнен через OAuth, смена пароля недоступна' }, { status: 400 });
     }
-    if (!verifyPassword(currentPassword, fileUser.password)) {
+    if (!verifyPassword(currentPassword, user.password)) {
       return NextResponse.json({ error: 'Неверный текущий пароль' }, { status: 400 });
     }
     const hash = hashPassword(newPassword);
-    await updateFileUserPassword(email, hash);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hash },
+    });
     return NextResponse.json({ success: true });
   } catch (err) {
     if (err instanceof z.ZodError) {

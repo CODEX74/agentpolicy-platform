@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFileAgentsRun24_7 } from '@/lib/db/file-agents';
-import { getDemoPositions } from '@/lib/db/file-demo-transactions';
+import { prisma } from '@/lib/db/prisma';
+import { getDemoPositions } from '@/lib/db/demo-transactions';
 import { runAgentOnce, type RunAgentResult } from '@/lib/agent-run';
 import { sendTelegramMessageToChat } from '@/lib/telegram';
 import { getTelegramIdByEmail } from '@/lib/db/user-telegram';
@@ -37,13 +37,18 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const agents = await getFileAgentsRun24_7();
+  const agents = await prisma.agent.findMany({
+    where: { run24_7: true, demoBalance: { gt: 0 } },
+    include: { user: true },
+  });
   const results: { agentId: string; agentName: string; userEmail: string; result: RunAgentResult; positions: any[] }[] = [];
 
   for (const agent of agents) {
-    const result = await runAgentOnce(agent._id, agent.userEmail);
-    const positions = await getDemoPositions(agent._id, agent.userEmail);
-    results.push({ agentId: agent._id, agentName: agent.name, userEmail: agent.userEmail, result, positions });
+    const userEmail = agent.user.email;
+    if (!userEmail) continue;
+    const result = await runAgentOnce(agent.id, userEmail);
+    const positions = await getDemoPositions(agent.id, userEmail);
+    results.push({ agentId: agent.id, agentName: agent.name, userEmail, result, positions });
   }
 
   const resultsForJson = results.map((r) => ({

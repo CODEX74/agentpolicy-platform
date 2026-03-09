@@ -1,10 +1,9 @@
-import { getFileAgentById, setFileAgentDemoBalance } from '@/lib/db/file-agents';
-import { getFilePoliciesByEmail } from '@/lib/db/file-policies';
+import { prisma } from '@/lib/db/prisma';
 import {
   getDemoSpentToday,
   getDemoSpentThisWeek,
   addDemoTransaction,
-} from '@/lib/db/file-demo-transactions';
+} from '@/lib/db/demo-transactions';
 import {
   getUsdtPriceUsd,
   getMarketPrices,
@@ -43,7 +42,12 @@ export async function runAgentOnce(
   agentId: string,
   userEmail: string
 ): Promise<RunAgentResult> {
-  const agent = await getFileAgentById(agentId, userEmail);
+  const user = await prisma.user.findUnique({ where: { email: userEmail.toLowerCase() } });
+  if (!user) return { ok: false, action: 'hold', error: 'User not found' };
+
+  const agent = await prisma.agent.findFirst({
+    where: { id: agentId, userId: user.id },
+  });
   if (!agent) return { ok: false, action: 'hold', error: 'Agent not found' };
 
   const balance = agent.demoBalance ?? 0;
@@ -51,13 +55,22 @@ export async function runAgentOnce(
     return { ok: false, action: 'hold', error: 'Установите демо-баланс агенту', demoBalance: 0 };
   }
 
-  const [policies] = await getFilePoliciesByEmail(userEmail, agentId);
-  const policy = policies ?? {
-    dailyLimit: 1,
-    weeklyLimit: 5,
-    maxPerTransaction: 0.5,
-    allowedOperations: ['transfer'],
-  };
+  const policyRow = await prisma.policy.findUnique({
+    where: { userId_agentId: { userId: user.id, agentId } },
+  });
+  const policy = policyRow
+    ? {
+        dailyLimit: policyRow.dailyLimit,
+        weeklyLimit: policyRow.weeklyLimit,
+        maxPerTransaction: policyRow.maxPerTransaction,
+        allowedOperations: policyRow.allowedOperations ?? ['transfer'],
+      }
+    : {
+        dailyLimit: 1,
+        weeklyLimit: 5,
+        maxPerTransaction: 0.5,
+        allowedOperations: ['transfer'],
+      };
 
   const spentToday = await getDemoSpentToday(agentId, userEmail);
   const spentWeek = await getDemoSpentThisWeek(agentId, userEmail);
@@ -191,7 +204,10 @@ export async function runAgentOnce(
     }
 
     const newBalance = balance - amount;
-    await setFileAgentDemoBalance(agentId, userEmail, newBalance);
+    await prisma.agent.update({
+      where: { id: agentId },
+      data: { demoBalance: newBalance },
+    });
     await addDemoTransaction({
       agentId,
       userEmail,

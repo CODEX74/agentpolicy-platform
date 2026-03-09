@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resetAgentsDemoBalanceForUser } from '@/lib/db/file-agents';
-import { deleteDemoTransactionsByEmail } from '@/lib/db/file-demo-transactions';
+import { prisma } from '@/lib/db/prisma';
+import { deleteDemoTransactionsByEmail } from '@/lib/db/demo-transactions';
 
 /**
  * Выполняет сброс демо: удаляет все транзакции пользователя и восстанавливает балансы.
@@ -21,7 +21,19 @@ export async function GET(req: NextRequest) {
   }
   try {
     const deleted = await deleteDemoTransactionsByEmail(userEmail);
-    await resetAgentsDemoBalanceForUser(userEmail);
+    const user = await prisma.user.findUnique({ where: { email: userEmail } });
+    if (user) {
+      const agents = await prisma.agent.findMany({
+        where: { userId: user.id },
+      });
+      for (const a of agents) {
+        const target = a.initialDemoBalance ?? a.demoBalance ?? 0;
+        await prisma.agent.update({
+          where: { id: a.id },
+          data: { demoBalance: target, initialDemoBalance: a.initialDemoBalance ?? a.demoBalance },
+        });
+      }
+    }
     return NextResponse.json({
       text: `Демо сброшено. Удалено транзакций: ${deleted}. Балансы агентов восстановлены до изначальных (как на сайте). Данные на сайте обновлены.`,
     });

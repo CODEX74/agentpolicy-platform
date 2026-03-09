@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
-import { getFileAgentById, setFileAgentRun24_7 } from '@/lib/db/file-agents';
+import { prisma } from '@/lib/db/prisma';
 import { z } from 'zod';
 
 const bodySchema = z.object({
@@ -18,7 +18,11 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const { id } = await params;
-    const agent = await getFileAgentById(id, session.user.email);
+    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    const agent = await prisma.agent.findFirst({
+      where: { id, userId: user.id },
+    });
     if (!agent) return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
     return NextResponse.json({ run24_7: agent.run24_7 ?? false });
   } catch (err) {
@@ -39,9 +43,17 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
     const { run24_7 } = bodySchema.parse(body);
-    const agent = await setFileAgentRun24_7(id, session.user.email, run24_7);
+    const user = await prisma.user.findUnique({ where: { email: session.user.email } });
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    const agent = await prisma.agent.findFirst({
+      where: { id, userId: user.id },
+    });
     if (!agent) return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
-    return NextResponse.json({ run24_7: agent.run24_7 ?? false });
+    const updated = await prisma.agent.update({
+      where: { id },
+      data: { run24_7 },
+    });
+    return NextResponse.json({ run24_7: updated.run24_7 ?? false });
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: err.flatten() }, { status: 400 });

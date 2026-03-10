@@ -4,6 +4,7 @@ import { deleteDemoTransactionsByEmail, getDemoPositions, getDemoSpentToday } fr
 import { getMarketPrices } from '@/lib/ai/agent-trader';
 import { sendTelegramMessageToChat } from '@/lib/telegram';
 import { getEmailByTelegramId } from '@/lib/db/user-telegram';
+import { formatAssetQuantity } from '@/lib/utils/format';
 
 /** Сообщение от Telegram (message или edited_message) */
 interface TelegramMessage {
@@ -50,7 +51,7 @@ function formatBalanceMessage(
       lines.push('Коин    Кол-Во ЦенаNow ЦенаBuy');
       let coinsTotalUsdt = 0;
       for (const p of positions) {
-        const qty = p.quantity < 0.01 ? p.quantity.toExponential(2) : p.quantity.toFixed(4);
+        const qty = formatAssetQuantity(p.quantity);
         const currentPriceUsd = marketPrices[p.asset] ?? 0;
         const valueNow = p.quantity * currentPriceUsd;
         coinsTotalUsdt += valueNow;

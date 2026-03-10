@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
-import { getDemoPositions } from '@/lib/db/demo-transactions';
+import { getDemoPositions, type DemoPosition } from '@/lib/db/demo-transactions';
 import { runAgentOnce, type RunAgentResult } from '@/lib/agent-run';
 import { sendTelegramMessageToChat } from '@/lib/telegram';
 import { getTelegramIdByEmail } from '@/lib/db/user-telegram';
+import { formatAssetQuantity } from '@/lib/utils/format';
 
 /**
  * Крон для агентов с run24_7: запускает один цикл принятия решения для каждого такого агента.
@@ -41,7 +42,13 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
     where: { run24_7: true, demoBalance: { gt: 0 } },
     include: { user: true },
   });
-  const results: { agentId: string; agentName: string; userEmail: string; result: RunAgentResult; positions: any[] }[] = [];
+  const results: {
+    agentId: string;
+    agentName: string;
+    userEmail: string;
+    result: RunAgentResult;
+    positions: DemoPosition[];
+  }[] = [];
 
   for (const agent of agents) {
     const userEmail = agent.user.email;
@@ -93,8 +100,8 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
               if (r.positions?.length) {
                 parts.push(
                   'Позиции:',
-                  ...r.positions.map((p: any) => {
-                    const qty = p.quantity < 0.01 ? p.quantity.toExponential(2) : p.quantity.toFixed(4);
+                  ...r.positions.map((p) => {
+                    const qty = formatAssetQuantity(p.quantity);
                     const totalUsd = p.totalUsdSpent.toFixed(2);
                     return `${p.asset} — ${qty} — $${totalUsd}`;
                   })
@@ -102,6 +109,10 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
               }
               parts.push(`Обоснование: ${reason}`);
               if (r.result.action === 'buy_eth' && r.result.asset) {
+                if (r.result.amountEth != null && r.result.assetPriceUsd != null && r.result.assetPriceUsd > 0) {
+                  const boughtQty = r.result.amountEth / r.result.assetPriceUsd;
+                  parts.push(`Куплено: ${formatAssetQuantity(boughtQty)} ${r.result.asset} (на ${r.result.amountEth} USDT)`);
+                }
                 if (r.result.assetPriceUsd != null) parts.push(`Цена покупки: $${r.result.assetPriceUsd} (${r.result.asset})`);
                 if (r.result.termDays != null) parts.push(`Срок: ${r.result.termDays} дн.`);
                 if (r.result.priceReason) parts.push(`Почему эта цена: ${r.result.priceReason}`);

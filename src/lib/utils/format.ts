@@ -21,6 +21,26 @@ export function formatCurrency(
   }).format(value);
 }
 
+/**
+ * Формат количества монеты без экспоненты (чтобы 2.86e-4 не читалось как 2.86).
+ * Для маленьких значений показывает больше знаков после запятой.
+ */
+export function formatAssetQuantity(qty: number): string {
+  if (!Number.isFinite(qty)) return String(qty);
+  const abs = Math.abs(qty);
+  if (abs === 0) return '0';
+
+  // Подбираем точность так, чтобы не уходить в экспоненту и не терять смысл.
+  let decimals = 4;
+  if (abs < 1) decimals = 8;
+  if (abs < 0.01) decimals = 10;
+  if (abs < 0.0001) decimals = 12;
+
+  // Обрезаем хвостовые нули (0.10000000 -> 0.1)
+  const s = qty.toFixed(decimals);
+  return s.replace(/(\.\d*?[1-9])0+$/u, '$1').replace(/\.0+$/u, '');
+}
+
 export function formatDate(date: Date | string, locale = 'ru-RU'): string {
   return new Intl.DateTimeFormat(locale, {
     dateStyle: 'medium',

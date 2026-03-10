@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { getDemoPositions } from '@/lib/db/demo-transactions';
 import { getMarketPrices } from '@/lib/ai/agent-trader';
+import { formatAssetQuantity } from '@/lib/utils/format';
 
 /**
  * Возвращает текст сообщения «демо-баланс» для отправки в Telegram.
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest) {
       lines.push('Коин    Кол-Во ЦенаNow ЦенаBuy');
       let coinsTotalUsdt = 0;
       for (const p of positions) {
-        const qty = p.quantity < 0.01 ? p.quantity.toExponential(2) : p.quantity.toFixed(4);
+        const qty = formatAssetQuantity(p.quantity);
         const currentPriceUsd = marketPrices[p.asset] ?? 0;
         const valueNow = p.quantity * currentPriceUsd;
         coinsTotalUsdt += valueNow;

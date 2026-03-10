@@ -46,7 +46,7 @@ export function PnlByAgentChart({ data }: { data: PnlRecord[] }) {
           <Bar
             dataKey="pnlTotal"
             name="PnL, USDT"
-            fill="var(--color-foreground)"
+            fill="#22C55E"
             fillOpacity={0.7}
           />
         </BarChart>

@@ -48,7 +48,7 @@ export function AgentBalancesChart({ data }: { data: AgentBalance[] }) {
           <Bar
             dataKey="demoBalance"
             name="Баланс, USDT"
-            fill="var(--color-foreground)"
+            fill="#6366F1"
             fillOpacity={0.7}
           />
         </BarChart>

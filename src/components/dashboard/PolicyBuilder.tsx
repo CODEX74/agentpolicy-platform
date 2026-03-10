@@ -217,12 +217,12 @@ export function PolicyBuilder({ agentId, initialPolicy, onSave }: PolicyBuilderP
 
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-medium">Минимальный срок удержания</h3>
+          <h3 className="text-lg font-medium">Максимальный срок удержания</h3>
         </CardHeader>
         <CardContent className="space-y-2">
           <p className="text-xs text-zinc-600 dark:text-zinc-400">
-            Минимальное время, через которое агент обязан зафиксировать хотя бы одну сделку (продажу).
-            Используется и для Инвестора, и для Трейдера.
+            Максимальное время, в течение которого агент может держать позицию до фиксации хотя бы одной сделки (продажи).
+            Параметр используется и для Инвестора, и для Трейдера.
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <Input

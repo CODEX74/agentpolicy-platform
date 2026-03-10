@@ -48,8 +48,8 @@ export function BalanceChart({ data }: { data: DataPoint[] }) {
             type="monotone"
             dataKey="balance"
             name="Объём"
-            stroke="var(--color-foreground)"
-            fill="var(--color-foreground)"
+            stroke="#6366F1"
+            fill="#6366F1"
             fillOpacity={0.2}
             strokeWidth={1.5}
           />

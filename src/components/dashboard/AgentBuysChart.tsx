@@ -88,8 +88,8 @@ export function AgentBuysChart({ data }: { data: AgentBuyPoint[] }) {
                     type="monotone"
                     dataKey="buyAmount"
                     name="Покупки, USDT"
-                    fill="var(--color-foreground)"
-                    stroke="var(--color-foreground)"
+                    fill="#0EA5E9"
+                    stroke="#0EA5E9"
                     strokeWidth={1.5}
                   />
                 </LineChart>

@@ -6,16 +6,25 @@ import { HowItWorks } from '@/components/landing/HowItWorks';
 import { Pricing } from '@/components/landing/Pricing';
 import { CTA } from '@/components/landing/CTA';
 
-export default function Home() {
+type Lang = 'ru' | 'en';
+
+function getLang(searchParams?: { lang?: string }): Lang {
+  const raw = searchParams?.lang?.toLowerCase();
+  return raw === 'en' ? 'en' : 'ru';
+}
+
+export default function Home({ searchParams }: { searchParams?: { lang?: string } }) {
+  const lang = getLang(searchParams);
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <Hero />
-        <Features />
-        <HowItWorks />
-        <Pricing />
-        <CTA />
+        <Hero lang={lang} />
+        <Features lang={lang} />
+        <HowItWorks lang={lang} />
+        <Pricing lang={lang} />
+        <CTA lang={lang} />
       </main>
       <Footer />
     </div>

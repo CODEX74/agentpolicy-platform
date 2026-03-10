@@ -92,26 +92,36 @@ export async function GET() {
       pnlTotal: p.totalSells - p.totalBuys,
     }));
 
-    // Распределение активов: текущие позиции по всем агентам, оценённые по рынку
-    const assetTotals = new Map<string, number>();
+    // Распределение активов по агентам: текущие позиции каждого агента, оценённые по рынку
+    const assetAllocationByAgent: {
+      agentId: string;
+      name: string;
+      assets: { asset: string; valueUsd: number }[];
+    }[] = [];
     for (const a of agents) {
       const positions = await getDemoPositions(a.id, email);
+      const totals = new Map<string, number>();
       for (const p of positions) {
         const price = marketPrices[p.asset] ?? p.avgPriceUsd ?? 0;
         if (!price || p.quantity <= 0) continue;
         const value = p.quantity * price;
-        assetTotals.set(p.asset, (assetTotals.get(p.asset) ?? 0) + value);
+        totals.set(p.asset, (totals.get(p.asset) ?? 0) + value);
       }
+      const assets = Array.from(totals.entries()).map(([asset, valueUsd]) => ({
+        asset,
+        valueUsd,
+      }));
+      assetAllocationByAgent.push({
+        agentId: a.id,
+        name: a.name,
+        assets,
+      });
     }
-    const assetAllocation = Array.from(assetTotals.entries()).map(([asset, valueUsd]) => ({
-      asset,
-      valueUsd,
-    }));
 
     return NextResponse.json({
       balanceHistory,
       agentBalances,
-      assetAllocation,
+      assetAllocationByAgent,
       pnlByAgent,
     });
   } catch (err) {

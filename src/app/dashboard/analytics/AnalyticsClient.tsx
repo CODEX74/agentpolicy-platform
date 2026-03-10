@@ -7,7 +7,8 @@ import { PnlByAgentChart } from '@/components/dashboard/PnlByAgentChart';
 import { useAnalytics } from '@/hooks/useAnalytics';
 
 export function AnalyticsClient() {
-  const { balanceHistory, agentBalances, assetAllocation, pnlByAgent, isLoading } = useAnalytics();
+  const { balanceHistory, agentBalances, assetAllocationByAgent, pnlByAgent, isLoading } =
+    useAnalytics();
 
   return (
     <>
@@ -42,14 +43,29 @@ export function AnalyticsClient() {
                 <AgentBalancesChart data={agentBalances} />
               </div>
             </div>
-            <div>
-              <h2 className="text-lg font-semibold">Распределение активов</h2>
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold">Распределение активов по агентам</h2>
               <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                Текущие позиции агентов по активам, оценённые по рыночной цене (демо).
+                Текущие демо-позиции каждого агента, оценённые по рыночной цене.
               </p>
-              <div className="mt-3">
-                <AssetAllocationChart data={assetAllocation} />
-              </div>
+              {assetAllocationByAgent.length === 0 ? (
+                <div className="mt-3 flex h-64 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
+                  <p className="text-zinc-500">Нет данных по позициям агентов</p>
+                </div>
+              ) : (
+                <div className="mt-3 space-y-4">
+                  {assetAllocationByAgent.map((a) => (
+                    <div key={a.agentId} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
+                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                        {a.name}
+                      </p>
+                      <div className="mt-2">
+                        <AssetAllocationChart data={a.assets} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </section>
 

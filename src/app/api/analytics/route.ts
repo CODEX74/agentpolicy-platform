@@ -118,30 +118,26 @@ export async function GET() {
       });
     }
 
-    // Покупки по дням для каждого агента
-    const buysByAgentAndDay = new Map<
-      string,
-      { agentId: string; name: string; date: string; buyAmount: number }[]
-    >();
-    for (const a of agents) {
-      buysByAgentAndDay.set(a.id, []);
-    }
+    // Покупки (отдельные транзакции) для каждого агента
+    const buysByAgentOverTime: {
+      agentId: string;
+      name: string;
+      date: string;
+      buyAmount: number;
+    }[] = [];
     for (const t of demo) {
       if (!t.agentId || t.type !== 'buy_eth') continue;
       const agentId = t.agentId;
       const rec = agentBalances.find((ab) => ab.agentId === agentId);
       const name = rec?.name ?? 'Agent';
-      const date = t.createdAt.slice(0, 10);
-      const list = buysByAgentAndDay.get(agentId);
-      if (!list) continue;
-      let dayRec = list.find((r) => r.date === date);
-      if (!dayRec) {
-        dayRec = { agentId, name, date, buyAmount: 0 };
-        list.push(dayRec);
-      }
-      dayRec.buyAmount += t.amountEth;
+      const date = t.createdAt; // полный ISO, чтобы различать отдельные сделки
+      buysByAgentOverTime.push({
+        agentId,
+        name,
+        date,
+        buyAmount: t.amountEth,
+      });
     }
-    const buysByAgentOverTime = Array.from(buysByAgentAndDay.values()).flat();
 
     return NextResponse.json({
       balanceHistory,

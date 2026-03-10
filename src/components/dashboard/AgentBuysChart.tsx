@@ -1,8 +1,8 @@
 'use client';
 
 import {
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -15,6 +15,16 @@ interface AgentBuyPoint {
   agentId: string;
   name: string;
   buyAmount: number;
+}
+
+function formatLabelDate(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 export function AgentBuysChart({ data }: { data: AgentBuyPoint[] }) {
@@ -36,6 +46,9 @@ export function AgentBuysChart({ data }: { data: AgentBuyPoint[] }) {
         }, new Map<string, AgentBuyPoint[]>())
       ).map(([agentId, points]) => {
         const name = points[0]?.name ?? agentId;
+        const sortedPoints = [...points].sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
         return (
           <div
             key={agentId}
@@ -44,7 +57,7 @@ export function AgentBuysChart({ data }: { data: AgentBuyPoint[] }) {
             <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{name}</p>
             <div className="mt-2 h-48 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={points} margin={{ top: 8, right: 8, left: 0, bottom: 24 }}>
+                <LineChart data={sortedPoints} margin={{ top: 8, right: 8, left: 0, bottom: 24 }}>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     className="stroke-zinc-200 dark:stroke-zinc-700"
@@ -56,6 +69,7 @@ export function AgentBuysChart({ data }: { data: AgentBuyPoint[] }) {
                     angle={-20}
                     textAnchor="end"
                     height={50}
+                    tickFormatter={formatLabelDate}
                   />
                   <YAxis
                     className="text-xs"
@@ -64,15 +78,21 @@ export function AgentBuysChart({ data }: { data: AgentBuyPoint[] }) {
                     }
                   />
                   <Tooltip
-                    formatter={(value: any) => [`${Number(value ?? 0).toFixed(2)} USDT`, 'Покупки']}
+                    formatter={(value: any) => [
+                      `${Number(value ?? 0).toFixed(2)} USDT`,
+                      'Покупка',
+                    ]}
+                    labelFormatter={(label: any) => formatLabelDate(String(label))}
                   />
-                  <Bar
+                  <Line
+                    type="monotone"
                     dataKey="buyAmount"
                     name="Покупки, USDT"
                     fill="var(--color-foreground)"
-                    fillOpacity={0.7}
+                    stroke="var(--color-foreground)"
+                    strokeWidth={1.5}
                   />
-                </BarChart>
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </div>

@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Hero } from '@/components/landing/Hero';
@@ -18,7 +19,9 @@ export default function Home({ searchParams }: { searchParams?: { lang?: string 
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
+      <Suspense fallback={null}>
+        <Header />
+      </Suspense>
       <main className="flex-1">
         <Hero lang={lang} />
         <Features lang={lang} />

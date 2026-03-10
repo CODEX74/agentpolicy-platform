@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Pricing } from '@/components/landing/Pricing';
@@ -14,7 +15,9 @@ export default function PricingPage({ searchParams }: { searchParams?: { lang?: 
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
+      <Suspense fallback={null}>
+        <Header />
+      </Suspense>
       <main className="flex-1 py-12">
         <Pricing lang={lang} />
       </main>

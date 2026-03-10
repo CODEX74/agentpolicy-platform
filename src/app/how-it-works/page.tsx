@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { HowItWorks } from '@/components/landing/HowItWorks';
@@ -14,7 +15,9 @@ export default function HowItWorksPage({ searchParams }: { searchParams?: { lang
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
+      <Suspense fallback={null}>
+        <Header />
+      </Suspense>
       <main className="flex-1 py-12">
         <HowItWorks lang={lang} />
       </main>

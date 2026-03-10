@@ -49,7 +49,10 @@ export function AssetAllocationChart({ data }: { data: AssetSlice[] }) {
             cx="50%"
             cy="50%"
             outerRadius={80}
-            label={({ asset }) => asset}
+            label={(props) => {
+              const payload = props?.payload as AssetSlice | undefined;
+              return payload?.asset ?? '';
+            }}
           >
             {nonZero.map((entry, index) => (
               <Cell

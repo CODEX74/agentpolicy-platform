@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from 'recharts';
+import { useLang, type Lang } from '@/contexts/LanguageContext';
 
 interface AssetSlice {
   asset: string;
@@ -27,13 +28,20 @@ const COLORS = [
   '#0EA5E9',
 ];
 
+const t: Record<Lang, { noPositions: string; asset: string }> = {
+  ru: { noPositions: 'Нет открытых позиций по активам', asset: 'Актив' },
+  en: { noPositions: 'No open positions by asset', asset: 'Asset' },
+};
+
 export function AssetAllocationChart({ data }: { data: AssetSlice[] }) {
+  const lang = useLang();
+  const text = t[lang];
   const nonZero = data.filter((d) => d.valueUsd > 0);
 
   if (!nonZero.length) {
     return (
       <div className="flex h-64 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
-        <p className="text-zinc-500">Нет открытых позиций по активам</p>
+        <p className="text-zinc-500">{text.noPositions}</p>
       </div>
     );
   }
@@ -64,7 +72,7 @@ export function AssetAllocationChart({ data }: { data: AssetSlice[] }) {
           <Tooltip
             formatter={(value: any, _name, entry: any) => [
               `${Number(value ?? 0).toFixed(2)} USDT`,
-              entry?.payload?.asset ?? 'Актив',
+              entry?.payload?.asset ?? text.asset,
             ]}
           />
           <Legend />

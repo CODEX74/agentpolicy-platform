@@ -80,11 +80,11 @@ export async function GET() {
     }
     for (const t of demo) {
       if (!t.agentId) continue;
-      if (t.type !== 'buy_eth' && t.type !== 'sell_eth') continue;
+      if (t.type !== 'buy_coin' && t.type !== 'sell_coin') continue;
       const rec = pnlByAgentMap.get(t.agentId);
       if (!rec) continue;
-      if (t.type === 'buy_eth') rec.totalBuys += t.amountEth;
-      if (t.type === 'sell_eth') rec.totalSells += t.amountEth;
+      if (t.type === 'buy_coin') rec.totalBuys += t.amountEth;
+      if (t.type === 'sell_coin') rec.totalSells += t.amountEth;
     }
     const pnlByAgent = Array.from(pnlByAgentMap.values()).map((p) => ({
       agentId: p.agentId,
@@ -126,7 +126,7 @@ export async function GET() {
       buyAmount: number;
     }[] = [];
     for (const t of demo) {
-      if (!t.agentId || t.type !== 'buy_eth') continue;
+      if (!t.agentId || t.type !== 'buy_coin') continue;
       const agentId = t.agentId;
       const rec = agentBalances.find((ab) => ab.agentId === agentId);
       const name = rec?.name ?? 'Agent';

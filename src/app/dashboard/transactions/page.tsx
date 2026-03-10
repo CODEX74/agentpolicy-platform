@@ -33,7 +33,7 @@ export default async function TransactionsPage() {
             <p>Транзакции в списке:</p>
             <ol className="list-inside list-decimal space-y-1">
               <li>
-                <strong>Действия агента с демо-балансом</strong> — каждый запуск агента (ручной или по крону 24/7): hold, buy_eth, transfer и т.д. Отображаются со статусом «Демо».
+                <strong>Действия агента с демо-балансом</strong> — каждый запуск агента (ручной или по крону 24/7): hold, buy_coin, sell_coin, transfer и т.д. Отображаются со статусом «Демо».
               </li>
               <li>
                 <strong>Отправка через приложение</strong> — кошелёк (CDP), привязка к агенту, перевод через <code className="rounded bg-zinc-200 px-1 dark:bg-zinc-700">POST /api/wallets/transaction</code>.

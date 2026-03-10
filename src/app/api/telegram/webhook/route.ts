@@ -255,14 +255,14 @@ export async function POST(req: NextRequest) {
               agentId: agent.id,
               userId: user!.id,
               createdAt: { gte: today },
-              type: { in: ['buy_eth', 'sell_eth'] },
+              type: { in: ['buy_coin', 'sell_coin'] },
             },
           });
           const txsAll = await prisma.demoTransaction.findMany({
             where: {
               agentId: agent.id,
               userId: user!.id,
-              type: { in: ['buy_eth', 'sell_eth'] },
+              type: { in: ['buy_coin', 'sell_coin'] },
             },
           });
 
@@ -273,19 +273,19 @@ export async function POST(req: NextRequest) {
             continue;
           }
           const totalBuysToday = txsToday
-            .filter((t) => t.type === 'buy_eth')
+            .filter((t) => t.type === 'buy_coin')
             .reduce((sum, t) => sum + t.amountEth, 0);
           const totalSellsToday = txsToday
-            .filter((t) => t.type === 'sell_eth')
+            .filter((t) => t.type === 'sell_coin')
             .reduce((sum, t) => sum + t.amountEth, 0);
           const netToday = totalSellsToday - totalBuysToday;
           totalNetToday += netToday;
 
           const totalBuysAll = txsAll
-            .filter((t) => t.type === 'buy_eth')
+            .filter((t) => t.type === 'buy_coin')
             .reduce((sum, t) => sum + t.amountEth, 0);
           const totalSellsAll = txsAll
-            .filter((t) => t.type === 'sell_eth')
+            .filter((t) => t.type === 'sell_coin')
             .reduce((sum, t) => sum + t.amountEth, 0);
           const netAll = totalSellsAll - totalBuysAll;
           totalNetAllTime += netAll;

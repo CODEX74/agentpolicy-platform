@@ -20,7 +20,7 @@ export async function getOldestBuyAtForAsset(params: {
     where: {
       agentId: params.agentId,
       userId: user.id,
-      type: 'buy_eth',
+      type: 'buy_coin',
       asset: assetUpper,
       amountEth: { gt: 0 },
     },
@@ -43,7 +43,7 @@ export async function hasSellInLastMinutes(params: {
     where: {
       agentId: params.agentId,
       userId: user.id,
-      type: 'sell_eth',
+      type: 'sell_coin',
       createdAt: { gte: since },
     },
   });
@@ -179,7 +179,7 @@ export async function getDemoSpentThisWeek(agentId: string, userEmail: string): 
       userId: user.id,
       createdAt: { gte: weekAgo },
       // В лимиты "потрачено" считаем только покупки/переводы (sell не должен уменьшать лимит).
-      type: { in: ['buy_eth', 'transfer'] },
+      type: { in: ['buy_coin', 'transfer'] },
     },
   });
   return rows.reduce((sum, t) => sum + t.amountEth, 0);
@@ -197,7 +197,7 @@ export async function getDemoSpentToday(agentId: string, userEmail: string): Pro
       agentId,
       userId: user.id,
       createdAt: { gte: today },
-      type: { in: ['buy_eth', 'transfer'] },
+      type: { in: ['buy_coin', 'transfer'] },
     },
   });
   return rows.reduce((sum, t) => sum + t.amountEth, 0);
@@ -241,13 +241,13 @@ export async function getDemoPositions(
 
     const cur = byAsset.get(asset) ?? { totalUsd: 0, quantity: 0 };
 
-    if (t.type === 'buy_eth' && t.amountEth > 0) {
+    if (t.type === 'buy_coin' && t.amountEth > 0) {
       const qty = t.amountEth / price;
       byAsset.set(asset, { totalUsd: cur.totalUsd + t.amountEth, quantity: cur.quantity + qty });
       continue;
     }
 
-    if (t.type === 'sell_eth' && t.amountEth > 0) {
+    if (t.type === 'sell_coin' && t.amountEth > 0) {
       // amountEth для sell — это полученные USDT (выручка)
       const sellQty = t.amountEth / price;
       if (cur.quantity <= 0) continue;

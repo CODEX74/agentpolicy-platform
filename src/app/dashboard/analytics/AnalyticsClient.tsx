@@ -87,9 +87,9 @@ export function AnalyticsClient() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold">Суммы покупок по агентам</h2>
+            <h2 className="text-lg font-semibold">Сумма на одну покупку по агентам</h2>
             <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-              Объём покупок (buy_eth) в USDT по дням для каждого агента отдельно.
+              Объём покупок в USDT по дням для каждого агента отдельно.
             </p>
             <div className="mt-3">
               <AgentBuysChart data={buysByAgentOverTime} />

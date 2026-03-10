@@ -166,7 +166,7 @@ export async function runAgentOnce(
   };
 
   // Для трейдера: если за последние N минут (из политики) не было ни одной продажи и есть открытая позиция —
-  // принудительно перевести решение в sell_eth по самой крупной позиции.
+  // принудительно перевести решение в sell_coin по самой крупной позиции.
   if (agent.agentType === 'TRADER') {
     const hadRecentSell = await hasSellInLastMinutes({
       agentId,
@@ -176,13 +176,13 @@ export async function runAgentOnce(
     if (!hadRecentSell) {
       const positions = await getDemoPositions(agentId, userEmail);
       const nonEmpty = positions.filter((p) => p.quantity > 0);
-      if (nonEmpty.length > 0 && decision.action !== 'sell_eth') {
+      if (nonEmpty.length > 0 && decision.action !== 'sell_coin') {
         const largest = nonEmpty.reduce((a, b) =>
           a.quantity * a.avgPriceUsd >= b.quantity * b.avgPriceUsd ? a : b
         );
         decision = {
           ...decision,
-          action: 'sell_eth',
+          action: 'sell_coin',
           asset: largest.asset,
           reason: `Принудительная фиксация: не было ни одной продажи за последние ${minHoldingIntervalMinutes} минут. ${decision.reason}`,
         };
@@ -203,7 +203,7 @@ export async function runAgentOnce(
     return { ok: true, action: 'hold', reason: decision.reason, demoBalance: balance };
   }
 
-  if (decision.action === 'buy_eth' || decision.action === 'transfer') {
+  if (decision.action === 'buy_coin' || decision.action === 'transfer') {
     const assetUpper = (decision.asset ?? '').toUpperCase().trim();
     if (assetUpper === 'USDT' || assetUpper === 'USDC') {
       await addDemoTransaction({
@@ -287,7 +287,7 @@ export async function runAgentOnce(
     };
   }
 
-  if (decision.action === 'sell_eth') {
+  if (decision.action === 'sell_coin') {
     const asset = (decision.asset ?? '').toUpperCase().trim();
     const priceUsd = asset ? marketPrices[asset] : undefined;
     if (!asset || !priceUsd || priceUsd <= 0) {
@@ -358,7 +358,7 @@ export async function runAgentOnce(
     await addDemoTransaction({
       agentId,
       userEmail,
-      type: 'sell_eth',
+      type: 'sell_coin',
       amountEth: proceedsUsdt,
       reason: decision.reason,
       marketPriceUsd: usdtPrice || undefined,
@@ -372,7 +372,7 @@ export async function runAgentOnce(
 
     return {
       ok: true,
-      action: 'sell_eth',
+      action: 'sell_coin',
       reason: decision.reason,
       demoBalance: newBalance,
       amountEth: proceedsUsdt,

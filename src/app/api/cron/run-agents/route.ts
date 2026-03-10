@@ -91,9 +91,9 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
               const a =
                 r.result.action === 'hold'
                   ? '⏸ Держать'
-                  : r.result.action === 'buy_eth' && r.result.asset
+                  : r.result.action === 'buy_coin' && r.result.asset
                     ? `▶ Покупка ${r.result.asset}`
-                    : r.result.action === 'sell_eth' && r.result.asset
+                    : r.result.action === 'sell_coin' && r.result.asset
                       ? `▶ Продажа ${r.result.asset}`
                     : `▶ ${r.result.action}`;
               const reason = r.result.reason ?? r.result.error ?? '—';
@@ -110,7 +110,7 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
                 );
               }
               parts.push(`Обоснование: ${reason}`);
-              if (r.result.action === 'buy_eth' && r.result.asset) {
+              if (r.result.action === 'buy_coin' && r.result.asset) {
                 if (r.result.amountEth != null && r.result.assetPriceUsd != null && r.result.assetPriceUsd > 0) {
                   const boughtQty = r.result.amountEth / r.result.assetPriceUsd;
                   parts.push(`Куплено: ${formatAssetQuantity(boughtQty)} ${r.result.asset} (на ${r.result.amountEth} USDT)`);
@@ -121,7 +121,7 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
                 if (r.result.priceReason) parts.push(`Почему эта цена: ${r.result.priceReason}`);
                 if (r.result.plans) parts.push(`Планы: ${r.result.plans}`);
               }
-              if (r.result.action === 'sell_eth' && r.result.asset) {
+              if (r.result.action === 'sell_coin' && r.result.asset) {
                 if (r.result.amountEth != null && r.result.assetPriceUsd != null && r.result.assetPriceUsd > 0) {
                   const soldQty = r.result.amountEth / r.result.assetPriceUsd;
                   parts.push(`Продано: ${formatAssetQuantity(soldQty)} ${r.result.asset} (получено ${r.result.amountEth} USDT)`);

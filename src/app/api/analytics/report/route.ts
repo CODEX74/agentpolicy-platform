@@ -165,6 +165,30 @@ export async function GET() {
           )
         : null;
 
+    const maxVolumeEntry =
+      balanceHistory.length > 0
+        ? balanceHistory.reduce((max, cur) =>
+            cur.balance > max.balance ? cur : max
+          )
+        : null;
+
+    const agentsWithPositiveBalance = agentBalances.filter(
+      (a) => (a.demoBalance ?? 0) > 0
+    ).length;
+
+    const allAssetsFlat = assetAllocationByAgent.flatMap((a) => a.assets);
+    const totalAssetsValue = allAssetsFlat.reduce(
+      (sum, asset) => sum + asset.valueUsd,
+      0
+    );
+
+    const lastBuyRecord =
+      buysByAgentOverTime.length > 0
+        ? buysByAgentOverTime.reduce((latest, cur) =>
+            new Date(cur.date) > new Date(latest.date) ? cur : latest
+          )
+        : null;
+
     const doc = new Document({
       sections: [
         {
@@ -228,6 +252,21 @@ export async function GET() {
             }),
 
             new Paragraph({
+              children: [
+                new TextRun({
+                  text: maxVolumeEntry
+                    ? `За анализируемый период наибольший объём операций пришёлся на ${maxVolumeEntry.date} с объёмом ${maxVolumeEntry.balance.toLocaleString(
+                        'ru-RU',
+                        { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                      )} USDT. Общий объём за период составил ${totalVolume.toLocaleString(
+                        'ru-RU',
+                        { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                      )} USDT.`
+                    : 'Данные по объёму операций за выбранный период отсутствуют.',
+                }),
+              ],
+            }),
+            new Paragraph({
               text: '',
             }),
             new Paragraph({
@@ -278,6 +317,22 @@ export async function GET() {
             }),
 
             new Paragraph({
+              children: [
+                new TextRun({
+                  text:
+                    agents.length > 0
+                      ? `В системе ${agents.length} агентов, суммарный демо-баланс составляет ${totalDemoBalance.toLocaleString(
+                          'ru-RU',
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }
+                        )} USDT; положительный баланс имеют ${agentsWithPositiveBalance} агентов.`
+                      : 'У пользователя пока нет созданных агентов с демо-балансом.',
+                }),
+              ],
+            }),
+            new Paragraph({
               text: '',
             }),
             new Paragraph({
@@ -327,6 +382,37 @@ export async function GET() {
               ],
             }),
 
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text:
+                    bestPnlAgent && pnlByAgent.length > 0
+                      ? `По результатам демо-торговли лучший P&L показал агент «${bestPnlAgent.name}», общий результат составляет ${bestPnlAgent.pnlTotal.toLocaleString(
+                          'ru-RU',
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }
+                        )} USDT.`
+                      : 'Данные по P&L агентов на выбранном интервале отсутствуют.',
+                }),
+              ],
+            }),
+            worstPnlAgent && bestPnlAgent && worstPnlAgent.agentId !== bestPnlAgent.agentId
+              ? new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `Минимальный P&L у агента «${worstPnlAgent.name}» и составляет ${worstPnlAgent.pnlTotal.toLocaleString(
+                        'ru-RU',
+                        {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        }
+                      )} USDT.`,
+                    }),
+                  ],
+                })
+              : new Paragraph({ text: '' }),
             new Paragraph({
               text: '',
             }),
@@ -399,6 +485,22 @@ export async function GET() {
                 }),
                 new Paragraph({ text: '' }),
               ];
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text:
+                    allAssetsFlat.length > 0
+                      ? `Совокупная оценка всех открытых позиций агентов составляет ${totalAssetsValue.toLocaleString(
+                          'ru-RU',
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          }
+                        )} USDT. Распределение по активам позволяет оценить концентрацию рисков и диверсификацию портфеля.`
+                      : 'На момент формирования отчёта у агентов нет открытых демо-позиций.',
+                }),
+              ],
             }),
 
             new Paragraph({
@@ -638,12 +740,30 @@ export async function GET() {
                 ),
               ],
             }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text:
+                    totalBuysCount > 0 && lastBuyRecord
+                      ? `За анализируемый период было зафиксировано ${totalBuysCount} демо-покупок по агентам; последняя покупка произошла ${new Date(
+                          lastBuyRecord.date
+                        ).toLocaleString('ru-RU', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}.`
+                      : 'В рассматриваемый период демо-покупок по агентам не зафиксировано.',
+                }),
+              ],
+            }),
 
             new Paragraph({
               text: '',
             }),
             new Paragraph({
-              text: '8. Итоговые выводы по аналитике',
+              text: '8. Общий вывод по всей аналитике',
               heading: HeadingLevel.HEADING_1,
             }),
             new Paragraph({

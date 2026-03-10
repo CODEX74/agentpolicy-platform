@@ -4,6 +4,7 @@ import {
   getDemoSpentThisWeek,
   addDemoTransaction,
   getDemoPositions,
+  getOldestBuyAtForAsset,
 } from '@/lib/db/demo-transactions';
 import {
   getUsdtPriceUsd,
@@ -266,6 +267,34 @@ export async function runAgentOnce(
         ...demoExtra,
       });
       return { ok: true, action: 'hold', reason: decision.reason, demoBalance: balance };
+    }
+
+    // Для инвестора: продаём только если прошло 10+ дней с первой покупки, либо если сильная просадка.
+    if (agent.agentType === 'INVESTOR') {
+      const oldestBuyAt = await getOldestBuyAtForAsset({ agentId, userEmail, asset });
+      const heldDays =
+        oldestBuyAt != null ? (Date.now() - oldestBuyAt.getTime()) / (1000 * 60 * 60 * 24) : 0;
+      const avgBuy = pos.avgPriceUsd || 0;
+      const dropPct = avgBuy > 0 ? (priceUsd - avgBuy) / avgBuy : 0; // отрицательное = падение
+
+      const MIN_DAYS = 10;
+      const CRASH_DROP = -0.2; // -20%
+      const allowedByTime = heldDays >= MIN_DAYS;
+      const allowedByCrash = dropPct <= CRASH_DROP;
+
+      if (!allowedByTime && !allowedByCrash) {
+        const reasonHold = `Продажа отменена: для Инвестора продаём через ${MIN_DAYS}+ дней или при сильной просадке (≥20%). Сейчас удержание ~${heldDays.toFixed(1)} дн., изменение цены ~${(dropPct * 100).toFixed(1)}%. ${decision.reason}`;
+        await addDemoTransaction({
+          agentId,
+          userEmail,
+          type: 'hold',
+          amountEth: 0,
+          reason: reasonHold,
+          marketPriceUsd: usdtPrice || undefined,
+          ...demoExtra,
+        });
+        return { ok: true, action: 'hold', reason: reasonHold, demoBalance: balance };
+      }
     }
 
     // Продаём всю текущую позицию по текущей цене (демо).

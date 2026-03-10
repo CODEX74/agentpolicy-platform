@@ -7,6 +7,29 @@ export interface DemoPosition {
   avgPriceUsd: number;
 }
 
+export async function getOldestBuyAtForAsset(params: {
+  agentId: string;
+  userEmail: string;
+  asset: string;
+}): Promise<Date | null> {
+  const user = await prisma.user.findUnique({ where: { email: params.userEmail.toLowerCase() } });
+  if (!user) return null;
+
+  const assetUpper = params.asset.toUpperCase().trim();
+  const row = await prisma.demoTransaction.findFirst({
+    where: {
+      agentId: params.agentId,
+      userId: user.id,
+      type: 'buy_eth',
+      asset: assetUpper,
+      amountEth: { gt: 0 },
+    },
+    orderBy: { createdAt: 'asc' },
+    select: { createdAt: true },
+  });
+  return row?.createdAt ?? null;
+}
+
 export async function getDemoTransactionsByAgent(
   agentId: string,
   userEmail: string

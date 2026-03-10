@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db/prisma';
-import { getDemoTransactionsByEmail } from '@/lib/db/demo-transactions';
+import { getDemoTransactionsByEmail, getDemoPositions } from '@/lib/db/demo-transactions';
 import { getMarketPrices } from '@/lib/ai/agent-trader';
 import {
   Document,
@@ -98,6 +98,72 @@ export async function GET() {
       name: p.name,
       pnlTotal: p.totalSells - p.totalBuys,
     }));
+
+    // Распределение активов по агентам (оценка позиций по рынку)
+    const assetAllocationByAgent: {
+      agentId: string;
+      name: string;
+      assets: { asset: string; valueUsd: number }[];
+    }[] = [];
+    for (const a of agents) {
+      const positions = await getDemoPositions(a.id, email);
+      const totals = new Map<string, number>();
+      for (const p of positions) {
+        const price = marketPrices[p.asset] ?? p.avgPriceUsd ?? 0;
+        if (!price || p.quantity <= 0) continue;
+        const value = p.quantity * price;
+        totals.set(p.asset, (totals.get(p.asset) ?? 0) + value);
+      }
+      const assets = Array.from(totals.entries()).map(([asset, valueUsd]) => ({
+        asset,
+        valueUsd,
+      }));
+      assetAllocationByAgent.push({
+        agentId: a.id,
+        name: a.name,
+        assets,
+      });
+    }
+
+    // Покупки по агентам во времени
+    const buysByAgentOverTime: {
+      agentId: string;
+      name: string;
+      date: string;
+      buyAmount: number;
+    }[] = [];
+    for (const t of demo) {
+      if (!t.agentId || t.type !== 'buy_coin') continue;
+      const agentId = t.agentId;
+      const rec = agentBalances.find((ab) => ab.agentId === agentId);
+      const name = rec?.name ?? 'Agent';
+      const date = t.createdAt;
+      buysByAgentOverTime.push({
+        agentId,
+        name,
+        date,
+        buyAmount: t.amountEth,
+      });
+    }
+
+    // Сводные показатели для выводов
+    const totalVolume = balanceHistory.reduce((sum, d) => sum + d.balance, 0);
+    const totalDemoBalance = agentBalances.reduce(
+      (sum, a) => sum + (a.demoBalance ?? 0),
+      0
+    );
+    const bestPnlAgent =
+      pnlByAgent.length > 0
+        ? pnlByAgent.reduce((best, cur) =>
+            cur.pnlTotal > best.pnlTotal ? cur : best
+          )
+        : null;
+    const worstPnlAgent =
+      pnlByAgent.length > 0
+        ? pnlByAgent.reduce((worst, cur) =>
+            cur.pnlTotal < worst.pnlTotal ? cur : worst
+          )
+        : null;
 
     const doc = new Document({
       sections: [
@@ -265,7 +331,81 @@ export async function GET() {
               text: '',
             }),
             new Paragraph({
-              text: '4. Решения и транзакции агентов (демо)',
+              text: '4. Распределение активов по агентам (оценка позиций)',
+              heading: HeadingLevel.HEADING_1,
+            }),
+            ...assetAllocationByAgent.map((agent) => {
+              return new Paragraph({
+                children: [
+                  new TextRun({
+                    text: `Агент: ${agent.name}`,
+                    bold: true,
+                  }),
+                ],
+              });
+            }),
+            ...assetAllocationByAgent.flatMap((agent) => {
+              if (agent.assets.length === 0) {
+                return [
+                  new Paragraph({
+                    text: `У агента ${agent.name} нет открытых позиций.`,
+                  }),
+                ];
+              }
+              return [
+                new Table({
+                  rows: [
+                    new TableRow({
+                      children: [
+                        new TableCell({
+                          children: [
+                            new Paragraph({
+                              children: [new TextRun({ text: 'Актив', bold: true })],
+                            }),
+                          ],
+                        }),
+                        new TableCell({
+                          children: [
+                            new Paragraph({
+                              children: [
+                                new TextRun({ text: 'Оценка позиции, USDT', bold: true }),
+                              ],
+                            }),
+                          ],
+                        }),
+                      ],
+                    }),
+                    ...agent.assets.map(
+                      (asset) =>
+                        new TableRow({
+                          children: [
+                            new TableCell({
+                              children: [new Paragraph(asset.asset)],
+                            }),
+                            new TableCell({
+                              children: [
+                                new Paragraph(
+                                  asset.valueUsd.toLocaleString('ru-RU', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })
+                                ),
+                              ],
+                            }),
+                          ],
+                        })
+                    ),
+                  ],
+                }),
+                new Paragraph({ text: '' }),
+              ];
+            }),
+
+            new Paragraph({
+              text: '',
+            }),
+            new Paragraph({
+              text: '5. Решения и транзакции агентов (демо)',
               heading: HeadingLevel.HEADING_1,
             }),
             new Paragraph({
@@ -383,7 +523,7 @@ export async function GET() {
               text: '',
             }),
             new Paragraph({
-              text: '5. Текущие рыночные цены (USD)',
+              text: '6. Текущие рыночные цены (USD)',
               heading: HeadingLevel.HEADING_1,
             }),
             new Table({
@@ -426,6 +566,135 @@ export async function GET() {
                       ],
                     })
                 ),
+              ],
+            }),
+
+            new Paragraph({
+              text: '',
+            }),
+            new Paragraph({
+              text: '7. Покупки по агентам во времени (демо)',
+              heading: HeadingLevel.HEADING_1,
+            }),
+            new Table({
+              rows: [
+                new TableRow({
+                  children: [
+                    new TableCell({
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: 'Дата/время', bold: true })],
+                        }),
+                      ],
+                    }),
+                    new TableCell({
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: 'Агент', bold: true })],
+                        }),
+                      ],
+                    }),
+                    new TableCell({
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: 'Сумма покупки, USDT', bold: true })],
+                        }),
+                      ],
+                    }),
+                  ],
+                }),
+                ...buysByAgentOverTime.map(
+                  (b) =>
+                    new TableRow({
+                      children: [
+                        new TableCell({
+                          children: [
+                            new Paragraph(
+                              new Date(b.date).toLocaleString('ru-RU', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            ),
+                          ],
+                        }),
+                        new TableCell({
+                          children: [new Paragraph(b.name)],
+                        }),
+                        new TableCell({
+                          children: [
+                            new Paragraph(
+                              b.buyAmount.toLocaleString('ru-RU', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })
+                            ),
+                          ],
+                        }),
+                      ],
+                    })
+                ),
+              ],
+            }),
+
+            new Paragraph({
+              text: '',
+            }),
+            new Paragraph({
+              text: '8. Итоговые выводы по аналитике',
+              heading: HeadingLevel.HEADING_1,
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `Суммарный объём демо-операций за последние ${DAYS_BACK} дней составил ${totalVolume.toLocaleString(
+                    'ru-RU',
+                    { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                  )} USDT.`,
+                }),
+              ],
+            }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `Совокупный демо-баланс всех агентов: ${totalDemoBalance.toLocaleString(
+                    'ru-RU',
+                    { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                  )} USDT.`,
+                }),
+              ],
+            }),
+            bestPnlAgent
+              ? new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `Наилучший результат по P&L показал агент «${bestPnlAgent.name}» с результатом ${bestPnlAgent.pnlTotal.toLocaleString(
+                        'ru-RU',
+                        { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                      )} USDT.`,
+                    }),
+                  ],
+                })
+              : new Paragraph({ text: 'Данные по P&L агентов отсутствуют.' }),
+            worstPnlAgent && bestPnlAgent && worstPnlAgent.agentId !== bestPnlAgent.agentId
+              ? new Paragraph({
+                  children: [
+                    new TextRun({
+                      text: `Наиболее слабый результат по P&L у агента «${worstPnlAgent.name}» с результатом ${worstPnlAgent.pnlTotal.toLocaleString(
+                        'ru-RU',
+                        { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+                      )} USDT.`,
+                    }),
+                  ],
+                })
+              : new Paragraph({ text: '' }),
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: 'Демо-аналитика предназначена для оценки поведения агентов и не отражает реальные денежные потоки. Для перехода к боевому режиму необходимо настроить реальные кошельки и инфраструктуру CDP.',
+                }),
               ],
             }),
           ],

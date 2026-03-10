@@ -1,36 +1,48 @@
 'use client';
 
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useLang, type Lang } from '@/contexts/LanguageContext';
 
 interface DataPoint {
   date: string;
   balance: number;
 }
 
-function formatDateShort(iso: string) {
+function formatDateShort(iso: string, locale: string) {
   const d = new Date(iso + 'T12:00:00');
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+  return d.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
 }
 
-function formatBalance(value: number) {
+function formatBalance(value: number, locale: string) {
   const num = Number.isFinite(value) ? value : 0;
   const hasFraction = Math.abs(num % 1) > 0;
-  return num.toLocaleString('ru-RU', {
+  return num.toLocaleString(locale, {
     minimumFractionDigits: hasFraction ? 2 : 0,
     maximumFractionDigits: hasFraction ? 2 : 0,
   });
 }
 
+const t: Record<Lang, { noData: string; volume: string }> = {
+  ru: { noData: 'Нет данных для графика', volume: 'Объём' },
+  en: { noData: 'No chart data', volume: 'Volume' },
+};
+
 export function BalanceChart({ data }: { data: DataPoint[] }) {
+  const lang = useLang();
+  const locale = lang === 'en' ? 'en-US' : 'ru-RU';
+  const text = t[lang];
+
   if (!data?.length) {
     return (
       <div className="flex h-64 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
-        <p className="text-zinc-500">Нет данных для графика</p>
+        <p className="text-zinc-500">{text.noData}</p>
       </div>
     );
   }
 
   const maxBalance = Math.max(...data.map((d) => d.balance), 1);
+  const fmtShort = (iso: string) => formatDateShort(iso, locale);
+  const fmtBal = (v: number) => formatBalance(v, locale);
 
   return (
     <div className="h-64 w-full">
@@ -39,7 +51,7 @@ export function BalanceChart({ data }: { data: DataPoint[] }) {
           <CartesianGrid strokeDasharray="3 3" className="stroke-zinc-200 dark:stroke-zinc-700" />
           <XAxis
             dataKey="date"
-            tickFormatter={formatDateShort}
+            tickFormatter={fmtShort}
             className="text-xs"
             interval="preserveStartEnd"
           />
@@ -47,18 +59,17 @@ export function BalanceChart({ data }: { data: DataPoint[] }) {
             className="text-xs"
             domain={[0, maxBalance]}
             tickFormatter={(v) =>
-              v >= 1000 ? `${(v / 1000).toFixed(1)}k` : formatBalance(Number(v))
+              v >= 1000 ? `${(v / 1000).toFixed(1)}k` : fmtBal(Number(v))
             }
           />
           <Tooltip
-            // тип any здесь допустим: форматируем только числовое значение для тултипа
-            formatter={(value: any) => [`${formatBalance(Number(value ?? 0))} USDT`, 'Объём']}
-            labelFormatter={(label) => formatDateShort(String(label))}
+            formatter={(value: any) => [`${fmtBal(Number(value ?? 0))} USDT`, text.volume]}
+            labelFormatter={(label) => fmtShort(String(label))}
           />
           <Area
             type="monotone"
             dataKey="balance"
-            name="Объём"
+            name={text.volume}
             stroke="#6366F1"
             fill="#6366F1"
             fillOpacity={0.2}

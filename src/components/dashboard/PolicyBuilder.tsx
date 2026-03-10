@@ -8,13 +8,13 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
+import { useLang, withLang } from '@/contexts/LanguageContext';
+import type { Lang } from '@/contexts/LanguageContext';
 
 const ALLOWED_OPERATIONS = ['buy', 'sell', 'swap', 'hold'] as const;
-const ALLOWED_OPERATIONS_LABELS: Record<(typeof ALLOWED_OPERATIONS)[number], string> = {
-  buy: 'Покупка',
-  sell: 'Продажа',
-  swap: 'Обмен',
-  hold: 'Удержание',
+const OP_LABELS: Record<Lang, Record<(typeof ALLOWED_OPERATIONS)[number], string>> = {
+  ru: { buy: 'Покупка', sell: 'Продажа', swap: 'Обмен', hold: 'Удержание' },
+  en: { buy: 'Buy', sell: 'Sell', swap: 'Swap', hold: 'Hold' },
 };
 
 const policySchema = z.object({
@@ -59,7 +59,92 @@ const defaultValues: PolicyFormValues = {
   onLimitExceeded: true,
 };
 
+const t: Record<Lang, {
+  limitsTitle: string;
+  dailyLimit: string;
+  weeklyLimit: string;
+  maxPerTx: string;
+  holdingTitle: string;
+  holdingDesc: string;
+  allowedOps: string;
+  notifications: string;
+  telegramHint: string;
+  telegramLink: string;
+  telegramBot: string;
+  openaiHint: string;
+  onEachTx: string;
+  onLimitExceeded: string;
+  saved: string;
+  saveBtn: string;
+  saving: string;
+  errSave: string;
+  errOpenai: string;
+  errTelegram: string;
+  linkSettings: string;
+  linkSettingsTelegram: string;
+  linkSettingsOpenai: string;
+}> = {
+  ru: {
+    limitsTitle: 'Лимиты трат (USDT)',
+    dailyLimit: 'Дневной лимит',
+    weeklyLimit: 'Недельный лимит',
+    maxPerTx: 'Максимум за транзакцию',
+    holdingTitle: 'Максимальный срок удержания',
+    holdingDesc: 'Максимальное время, в течение которого агент может держать позицию до фиксации хотя бы одной сделки (продажи). Параметр используется и для Инвестора, и для Трейдера.',
+    allowedOps: 'Разрешённые операции',
+    notifications: 'Уведомления',
+    telegramHint: 'Сначала привяжите Telegram chat id в Настройках',
+    telegramLink: 'Чтобы включить Telegram-уведомления, привяжите chat id в',
+    telegramBot: 'Бот Telegram: Напишите ему /start и /balance, чтобы увидеть статусы агентов.',
+    openaiHint: 'Чтобы агент работал и политика сохранялась, укажите OpenAI API key в',
+    onEachTx: 'При каждой транзакции',
+    onLimitExceeded: 'При превышении лимита',
+    saved: 'Политика сохранена.',
+    saveBtn: 'Сохранить политику',
+    saving: 'Сохранение...',
+    errSave: 'Не удалось сохранить',
+    errOpenai: 'Чтобы сохранить политику и запускать агента, сначала укажите OpenAI API key: Настройки → OpenAI (ChatGPT).',
+    errTelegram: 'Чтобы включить уведомления в Telegram, сначала привяжите chat id: Настройки → Telegram.',
+    linkSettings: 'Настройки',
+    linkSettingsTelegram: 'Настройки → Telegram',
+    linkSettingsOpenai: 'Настройки → OpenAI (ChatGPT)',
+  },
+  en: {
+    limitsTitle: 'Spending limits (USDT)',
+    dailyLimit: 'Daily limit',
+    weeklyLimit: 'Weekly limit',
+    maxPerTx: 'Max per transaction',
+    holdingTitle: 'Max holding period',
+    holdingDesc: 'Maximum time the agent can hold a position before closing at least one trade (sell). Used for both Investor and Trader.',
+    allowedOps: 'Allowed operations',
+    notifications: 'Notifications',
+    telegramHint: 'Link Telegram chat id in Settings first',
+    telegramLink: 'To enable Telegram notifications, link your chat id in',
+    telegramBot: 'Telegram bot: Send /start and /balance to see agent statuses.',
+    openaiHint: 'For the agent to run and policy to save, set OpenAI API key in',
+    onEachTx: 'On each transaction',
+    onLimitExceeded: 'On limit exceeded',
+    saved: 'Policy saved.',
+    saveBtn: 'Save policy',
+    saving: 'Saving...',
+    errSave: 'Failed to save',
+    errOpenai: 'To save policy and run the agent, set OpenAI API key first: Settings → OpenAI (ChatGPT).',
+    errTelegram: 'To enable Telegram notifications, link your chat id first: Settings → Telegram.',
+    linkSettings: 'Settings',
+    linkSettingsTelegram: 'Settings → Telegram',
+    linkSettingsOpenai: 'Settings → OpenAI (ChatGPT)',
+  },
+};
+
+const UNIT_LABELS: Record<Lang, Record<string, string>> = {
+  ru: { minutes: 'минут', hours: 'часов', days: 'дней', months: 'месяцев', years: 'лет' },
+  en: { minutes: 'min', hours: 'hr', days: 'days', months: 'mo', years: 'yr' },
+};
+
 export function PolicyBuilder({ agentId, initialPolicy, onSave }: PolicyBuilderProps) {
+  const lang = useLang();
+  const text = t[lang];
+  const opLabels = OP_LABELS[lang];
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [telegramLinked, setTelegramLinked] = useState<boolean | null>(null);
@@ -117,17 +202,14 @@ export function PolicyBuilder({ agentId, initialPolicy, onSave }: PolicyBuilderP
     setSaveStatus('idle');
     setSaveError(null);
     if (openaiHasKey === false) {
-      const message =
-        'Чтобы сохранить политику и запускать агента, сначала укажите OpenAI API key: Настройки → OpenAI (ChatGPT).';
-      setSaveError(message);
+      setSaveError(text.errOpenai);
       setSaveStatus('error');
-      throw new Error(message);
+      throw new Error(text.errOpenai);
     }
     if (Boolean(data.notifyTelegram) && telegramLinked === false) {
-      const message = 'Чтобы включить уведомления в Telegram, сначала привяжите chat id: Настройки → Telegram.';
-      setSaveError(message);
+      setSaveError(text.errTelegram);
       setSaveStatus('error');
-      throw new Error(message);
+      throw new Error(text.errTelegram);
     }
     if (onSave) {
       await onSave(data);
@@ -170,7 +252,7 @@ export function PolicyBuilder({ agentId, initialPolicy, onSave }: PolicyBuilderP
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      const message = typeof err?.error === 'string' ? err.error : err?.message ?? 'Не удалось сохранить';
+      const message = typeof err?.error === 'string' ? err.error : err?.message ?? text.errSave;
       setSaveError(message);
       setSaveStatus('error');
       throw new Error(message);
@@ -182,11 +264,11 @@ export function PolicyBuilder({ agentId, initialPolicy, onSave }: PolicyBuilderP
     <form onSubmit={handleSubmit(save)} className="space-y-6">
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-medium">Лимиты трат (USDT)</h3>
+          <h3 className="text-lg font-medium">{text.limitsTitle}</h3>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium">Дневной лимит</label>
+            <label className="mb-1 block text-sm font-medium">{text.dailyLimit}</label>
             <Input
               type="number"
               step="0.001"
@@ -197,7 +279,7 @@ export function PolicyBuilder({ agentId, initialPolicy, onSave }: PolicyBuilderP
             )}
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Недельный лимит</label>
+            <label className="mb-1 block text-sm font-medium">{text.weeklyLimit}</label>
             <Input
               type="number"
               step="0.001"
@@ -205,7 +287,7 @@ export function PolicyBuilder({ agentId, initialPolicy, onSave }: PolicyBuilderP
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Максимум за транзакцию</label>
+            <label className="mb-1 block text-sm font-medium">{text.maxPerTx}</label>
             <Input
               type="number"
               step="0.001"
@@ -217,12 +299,11 @@ export function PolicyBuilder({ agentId, initialPolicy, onSave }: PolicyBuilderP
 
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-medium">Максимальный срок удержания</h3>
+          <h3 className="text-lg font-medium">{text.holdingTitle}</h3>
         </CardHeader>
         <CardContent className="space-y-2">
           <p className="text-xs text-zinc-600 dark:text-zinc-400">
-            Максимальное время, в течение которого агент может держать позицию до фиксации хотя бы одной сделки (продажи).
-            Параметр используется и для Инвестора, и для Трейдера.
+            {text.holdingDesc}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <Input
@@ -236,11 +317,9 @@ export function PolicyBuilder({ agentId, initialPolicy, onSave }: PolicyBuilderP
               {...register('minHoldingUnit')}
               className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800"
             >
-              <option value="minutes">минут</option>
-              <option value="hours">часов</option>
-              <option value="days">дней</option>
-              <option value="months">месяцев</option>
-              <option value="years">лет</option>
+              {(['minutes', 'hours', 'days', 'months', 'years'] as const).map((u) => (
+                <option key={u} value={u}>{UNIT_LABELS[lang][u]}</option>
+              ))}
             </select>
           </div>
         </CardContent>
@@ -248,13 +327,13 @@ export function PolicyBuilder({ agentId, initialPolicy, onSave }: PolicyBuilderP
 
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-medium">Разрешённые операции</h3>
+          <h3 className="text-lg font-medium">{text.allowedOps}</h3>
         </CardHeader>
         <CardContent className="space-y-2">
           {ALLOWED_OPERATIONS.map((op) => (
             <label key={op} className="flex items-center gap-2">
               <input type="checkbox" {...register('allowedOperations')} value={op} />
-              <span className="text-sm">{ALLOWED_OPERATIONS_LABELS[op]}</span>
+              <span className="text-sm">{opLabels[op]}</span>
             </label>
           ))}
         </CardContent>
@@ -262,7 +341,7 @@ export function PolicyBuilder({ agentId, initialPolicy, onSave }: PolicyBuilderP
 
       <Card>
         <CardHeader>
-          <h3 className="text-lg font-medium">Уведомления</h3>
+          <h3 className="text-lg font-medium">{text.notifications}</h3>
         </CardHeader>
         <CardContent className="space-y-2">
           <label className="flex items-center gap-2">
@@ -274,60 +353,55 @@ export function PolicyBuilder({ agentId, initialPolicy, onSave }: PolicyBuilderP
               type="checkbox"
               {...register('notifyTelegram')}
               disabled={telegramLinked === false}
-              title={
-                telegramLinked === false
-                  ? 'Сначала привяжите Telegram chat id в Настройках'
-                  : undefined
-              }
+              title={telegramLinked === false ? text.telegramHint : undefined}
             />
             <span className="text-sm">Telegram</span>
           </label>
           {telegramLinked === false && (
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Чтобы включить Telegram-уведомления, привяжите chat id в{' '}
-              <Link href="/dashboard/settings" className="underline">
-                Настройки → Telegram
+              {text.telegramLink}{' '}
+              <Link href={withLang('/dashboard/settings', lang)} className="underline">
+                {text.linkSettingsTelegram}
               </Link>
               .
             </p>
           )}
           {telegramLinked && (
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Бот Telegram:{' '}
+              {text.telegramBot}{' '}
               <Link href="https://t.me/AgentPolicyBot" target="_blank" rel="noopener noreferrer" className="underline">
                 @AgentPolicyBot
               </Link>
-              . Напишите ему /start и /balance, чтобы увидеть статусы агентов.
             </p>
           )}
           {openaiHasKey === false && (
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Чтобы агент работал и политика сохранялась, укажите OpenAI API key в{' '}
-              <Link href="/dashboard/settings" className="underline">
-                Настройки → OpenAI (ChatGPT)
+              {text.openaiHint}{' '}
+              <Link href={withLang('/dashboard/settings', lang)} className="underline">
+                {text.linkSettingsOpenai}
               </Link>
               .
             </p>
           )}
           <label className="flex items-center gap-2">
             <input type="checkbox" {...register('onEachTransaction')} />
-            <span className="text-sm">При каждой транзакции</span>
+            <span className="text-sm">{text.onEachTx}</span>
           </label>
           <label className="flex items-center gap-2">
             <input type="checkbox" {...register('onLimitExceeded')} />
-            <span className="text-sm">При превышении лимита</span>
+            <span className="text-sm">{text.onLimitExceeded}</span>
           </label>
         </CardContent>
       </Card>
 
       {saveStatus === 'success' && (
-        <p className="text-sm text-emerald-600 dark:text-emerald-400">Политика сохранена.</p>
+        <p className="text-sm text-emerald-600 dark:text-emerald-400">{text.saved}</p>
       )}
       {saveStatus === 'error' && saveError && (
         <p className="text-sm text-red-600 dark:text-red-400">{saveError}</p>
       )}
       <Button type="submit" disabled={isSubmitting || openaiHasKey === false} className="w-full">
-        {isSubmitting ? 'Сохранение...' : 'Сохранить политику'}
+        {isSubmitting ? text.saving : text.saveBtn}
       </Button>
     </form>
   );

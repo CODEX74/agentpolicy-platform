@@ -6,6 +6,85 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { formatAddress } from '@/lib/utils/format';
+import { useLang, withLang } from '@/contexts/LanguageContext';
+import type { Lang } from '@/contexts/LanguageContext';
+
+const t: Record<Lang, {
+  wallet: string;
+  detach: string;
+  transactionsHint: string;
+  transactions: string;
+  transactionsHintAfter: string;
+  sendTransfer: string;
+  recipientPlaceholder: string;
+  send: string;
+  notAttached: string;
+  selectWallet: string;
+  attach: string;
+  orEnterAddress: string;
+  addAndAttach: string;
+  createWallet: string;
+  errLoad: string;
+  errNetwork: string;
+  errAttach: string;
+  errDetach: string;
+  errAddress: string;
+  errAddWallet: string;
+  errAmount: string;
+  errSend: string;
+  errCreate: string;
+}> = {
+  ru: {
+    wallet: 'Кошелёк',
+    detach: 'Отвязать',
+    transactionsHint: 'Транзакции появятся в разделе',
+    transactions: 'Транзакции',
+    transactionsHintAfter: ' после отправки перевода через приложение (API) или при настройке вебхука CDP.',
+    sendTransfer: 'Отправить перевод (нужны CDP)',
+    recipientPlaceholder: 'Адрес получателя 0x...',
+    send: 'Отправить',
+    notAttached: 'Кошелёк не привязан',
+    selectWallet: 'Выберите кошелёк',
+    attach: 'Привязать',
+    orEnterAddress: 'Или введите адрес кошелька (без CDP)',
+    addAndAttach: 'Добавить и привязать',
+    createWallet: 'Создать кошелёк (CDP)',
+    errLoad: 'Не удалось загрузить кошельки',
+    errNetwork: 'Ошибка сети',
+    errAttach: 'Не удалось привязать',
+    errDetach: 'Не удалось отвязать',
+    errAddress: 'Введите адрес кошелька (0x...)',
+    errAddWallet: 'Не удалось добавить кошелёк',
+    errAmount: 'Введите корректную сумму (USDT)',
+    errSend: 'Не удалось отправить. Нужны CDP-ключи.',
+    errCreate: 'Не удалось создать кошелёк. Проверьте настройки CDP в .env.local',
+  },
+  en: {
+    wallet: 'Wallet',
+    detach: 'Detach',
+    transactionsHint: 'Transactions will appear in',
+    transactions: 'Transactions',
+    transactionsHintAfter: ' after sending via app (API) or when CDP webhook is set up.',
+    sendTransfer: 'Send transfer (CDP required)',
+    recipientPlaceholder: 'Recipient address 0x...',
+    send: 'Send',
+    notAttached: 'Wallet not linked',
+    selectWallet: 'Select wallet',
+    attach: 'Attach',
+    orEnterAddress: 'Or enter wallet address (no CDP)',
+    addAndAttach: 'Add and attach',
+    createWallet: 'Create wallet (CDP)',
+    errLoad: 'Failed to load wallets',
+    errNetwork: 'Network error',
+    errAttach: 'Failed to attach',
+    errDetach: 'Failed to detach',
+    errAddress: 'Enter wallet address (0x...)',
+    errAddWallet: 'Failed to add wallet',
+    errAmount: 'Enter a valid amount (USDT)',
+    errSend: 'Failed to send. CDP keys required.',
+    errCreate: 'Failed to create wallet. Check CDP settings in .env.local',
+  },
+};
 
 interface WalletItem {
   _id: string;
@@ -25,6 +104,8 @@ export function AgentWalletCard({
   currentWalletId,
   currentWalletAddress,
 }: AgentWalletCardProps) {
+  const lang = useLang();
+  const text = t[lang];
   const [wallets, setWallets] = useState<WalletItem[]>([]);
   const [selectedWalletId, setSelectedWalletId] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -50,11 +131,11 @@ export function AgentWalletCard({
         setError(null);
       } else {
         const err = await res.json().catch(() => ({}));
-        setError(typeof err?.error === 'string' ? err.error : 'Не удалось загрузить кошельки');
+        setError(typeof err?.error === 'string' ? err.error : text.errLoad);
       }
     } catch {
       setWallets([]);
-      setError('Ошибка сети');
+      setError(text.errNetwork);
     } finally {
       setLoading(false);
     }
@@ -76,7 +157,7 @@ export function AgentWalletCard({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        setError(typeof err?.error === 'string' ? err.error : 'Не удалось привязать');
+        setError(typeof err?.error === 'string' ? err.error : text.errAttach);
         return;
       }
       const data = await res.json();
@@ -98,7 +179,7 @@ export function AgentWalletCard({
       const res = await fetch(`/api/agents/${agentId}/wallet`, { method: 'DELETE' });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        setError(typeof err?.error === 'string' ? err.error : 'Не удалось отвязать');
+        setError(typeof err?.error === 'string' ? err.error : text.errDetach);
         return;
       }
       setAttachedWalletId(null);
@@ -112,7 +193,7 @@ export function AgentWalletCard({
   const handleAddByAddress = async () => {
     const addr = manualAddress.trim();
     if (!addr) {
-      setError('Введите адрес кошелька (0x...)');
+      setError(text.errAddress);
       return;
     }
     setError(null);
@@ -125,7 +206,7 @@ export function AgentWalletCard({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        setError(typeof err?.error === 'string' ? err.error : 'Не удалось добавить кошелёк');
+        setError(typeof err?.error === 'string' ? err.error : text.errAddWallet);
         return;
       }
       const wallet = await res.json();
@@ -144,7 +225,7 @@ export function AgentWalletCard({
     if (!to || !amount || !attachedAddress) return;
     const amountNum = parseFloat(amount);
     if (Number.isNaN(amountNum) || amountNum <= 0) {
-      setError('Введите корректную сумму (USDT)');
+      setError(text.errAmount);
       return;
     }
     const valueWei = BigInt(Math.round(amountNum * 1e18)).toString();
@@ -163,7 +244,7 @@ export function AgentWalletCard({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(typeof data?.error === 'string' ? data.error : 'Не удалось отправить. Нужны CDP-ключи.');
+        setError(typeof data?.error === 'string' ? data.error : text.errSend);
         return;
       }
       setSendToAddress('');
@@ -184,7 +265,7 @@ export function AgentWalletCard({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        setError(typeof err?.error === 'string' ? err.error : 'Не удалось создать кошелёк. Проверьте настройки CDP в .env.local');
+        setError(typeof err?.error === 'string' ? err.error : text.errCreate);
         return;
       }
       const wallet = await res.json();
@@ -202,7 +283,7 @@ export function AgentWalletCard({
   return (
     <Card>
       <CardHeader>
-        <h3 className="text-lg font-medium">Кошелёк</h3>
+        <h3 className="text-lg font-medium">{text.wallet}</h3>
       </CardHeader>
       <CardContent className="space-y-4">
         {attachedAddress ? (
@@ -218,24 +299,24 @@ export function AgentWalletCard({
                 disabled={actionLoading}
                 onClick={handleDetach}
               >
-                Отвязать
+                {text.detach}
               </Button>
             </div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
-              Транзакции появятся в разделе{' '}
-              <Link href="/dashboard/transactions" className="underline hover:no-underline">
-                Транзакции
+              {text.transactionsHint}{' '}
+              <Link href={withLang('/dashboard/transactions', lang)} className="underline hover:no-underline">
+                {text.transactions}
               </Link>
-              {' '}после отправки перевода через приложение (API) или при настройке вебхука CDP.
+              {text.transactionsHintAfter}
             </p>
             <div className="space-y-2 border-t border-zinc-200 pt-4 dark:border-zinc-700">
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Отправить перевод (нужны CDP)
+                {text.sendTransfer}
               </label>
               <div className="flex flex-wrap items-end gap-2">
                 <Input
                   type="text"
-                  placeholder="Адрес получателя 0x..."
+                  placeholder={text.recipientPlaceholder}
                   value={sendToAddress}
                   onChange={(e) => setSendToAddress(e.target.value)}
                   disabled={actionLoading}
@@ -257,13 +338,13 @@ export function AgentWalletCard({
                   disabled={!sendToAddress.trim() || !sendAmountEth.trim() || actionLoading}
                   onClick={handleSendTransaction}
                 >
-                  Отправить
+                  {text.send}
                 </Button>
               </div>
             </div>
           </div>
         ) : (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Кошелёк не привязан</p>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">{text.notAttached}</p>
         )}
 
         {!attachedAddress && (
@@ -274,7 +355,7 @@ export function AgentWalletCard({
               onChange={(e) => setSelectedWalletId(e.target.value)}
               disabled={loading || actionLoading}
             >
-              <option value="">Выберите кошелёк</option>
+              <option value="">{text.selectWallet}</option>
               {availableWallets.map((w) => (
                 <option key={w._id} value={w._id}>
                   {formatAddress(w.address)}
@@ -287,7 +368,7 @@ export function AgentWalletCard({
               disabled={!selectedWalletId || actionLoading}
               onClick={handleAttach}
             >
-              Привязать
+              {text.attach}
             </Button>
           </div>
         )}
@@ -295,7 +376,7 @@ export function AgentWalletCard({
         {!attachedAddress && (
           <div className="space-y-2">
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Или введите адрес кошелька (без CDP)
+              {text.orEnterAddress}
             </label>
             <div className="flex flex-wrap items-center gap-2">
               <Input
@@ -312,7 +393,7 @@ export function AgentWalletCard({
                 disabled={!manualAddress.trim() || actionLoading}
                 onClick={handleAddByAddress}
               >
-                Добавить и привязать
+                {text.addAndAttach}
               </Button>
             </div>
           </div>
@@ -326,7 +407,7 @@ export function AgentWalletCard({
             disabled={actionLoading}
             onClick={handleCreateWallet}
           >
-            Создать кошелёк (CDP)
+            {text.createWallet}
           </Button>
         </div>
 

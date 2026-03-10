@@ -1,10 +1,16 @@
 'use client';
 
-import Link from 'next/link';
 import { Card, CardContent, CardFooter } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Bot } from 'lucide-react';
 import { formatAddress } from '@/lib/utils/format';
+import { useLang, withLang } from '@/contexts/LanguageContext';
+import type { Lang } from '@/contexts/LanguageContext';
+
+const t: Record<Lang, { active: string; inactive: string; settings: string }> = {
+  ru: { active: 'Активен', inactive: 'Неактивен', settings: 'Настроить' },
+  en: { active: 'Active', inactive: 'Inactive', settings: 'Settings' },
+};
 
 interface AgentCardProps {
   agent: {
@@ -17,7 +23,10 @@ interface AgentCardProps {
 }
 
 export function AgentCard({ agent }: AgentCardProps) {
+  const lang = useLang();
+  const text = t[lang];
   const address = agent.walletId?.address;
+  const href = withLang(`/dashboard/agents/${agent._id}`, lang);
 
   return (
     <Card>
@@ -34,13 +43,13 @@ export function AgentCard({ agent }: AgentCardProps) {
             {address && (
               <p className="mt-2 font-mono text-xs text-zinc-500">{formatAddress(address)}</p>
             )}
-            <p className="mt-1 text-xs text-zinc-400">{agent.isActive ? 'Активен' : 'Неактивен'}</p>
+            <p className="mt-1 text-xs text-zinc-400">{agent.isActive ? text.active : text.inactive}</p>
           </div>
         </div>
       </CardContent>
       <CardFooter>
-        <Button href={`/dashboard/agents/${agent._id}`} variant="outline" size="sm">
-          Настроить
+        <Button href={href} variant="outline" size="sm">
+          {text.settings}
         </Button>
       </CardFooter>
     </Card>

@@ -95,7 +95,7 @@ export function TransactionTable({ transactions }: { transactions: Tx[] }) {
               <td className="px-4 py-3">{tx.amount} {tx.currency}</td>
               <td className="px-4 py-3 font-mono text-xs">{tx.toAddress ? formatAddress(tx.toAddress) : '—'}</td>
               <td className="px-4 py-3">{tx.isDemo ? text.demo : tx.status}</td>
-              <td className="px-4 py-3 text-zinc-500">{formatDate(tx.createdAt)}</td>
+              <td className="px-4 py-3 text-zinc-500">{formatDate(tx.createdAt, lang === 'en' ? 'en-US' : 'ru-RU')}</td>
               <td className="max-w-sm px-4 py-3 text-zinc-500">
                 {tx.isDemo ? (
                   <span className="block max-w-xs truncate" title={[tx.reason, tx.asset && `${text.asset}: ${tx.asset}`, tx.assetPriceUsd != null && `${text.price}: $${tx.assetPriceUsd}`, tx.priceReason, tx.termDays != null && `${tx.termDays} ${text.termDays}`, tx.plans].filter(Boolean).join('\n')}>

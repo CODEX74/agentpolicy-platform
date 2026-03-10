@@ -14,7 +14,6 @@ const schema = z.object({
   email: z.string().email('Введите корректный email'),
   password: z.string().min(6, 'Пароль не менее 6 символов'),
   name: z.string().min(1, 'Введите имя').max(200),
-  confirmCode: z.string().optional(),
   acceptPrivacy: z.literal(true, {
     errorMap: () => ({ message: 'Необходимо согласиться с Политикой конфиденциальности' }),
   }),
@@ -100,14 +99,6 @@ export default function RegisterPage() {
             {errors.password && (
               <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
             )}
-          </div>
-          <div>
-            <Input
-              {...register('confirmCode')}
-              type="text"
-              placeholder="Код подтверждения (если уже есть)"
-              className="w-full"
-            />
           </div>
           <div className="space-y-1">
             <label className="flex items-start gap-2 text-xs text-zinc-600 dark:text-zinc-400">

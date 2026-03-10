@@ -2,12 +2,21 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { Pricing } from '@/components/landing/Pricing';
 
-export default function PricingPage() {
+type Lang = 'ru' | 'en';
+
+function getLang(searchParams?: { lang?: string }): Lang {
+  const raw = searchParams?.lang?.toLowerCase();
+  return raw === 'en' ? 'en' : 'ru';
+}
+
+export default function PricingPage({ searchParams }: { searchParams?: { lang?: string } }) {
+  const lang = getLang(searchParams);
+
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1 py-12">
-        <Pricing />
+        <Pricing lang={lang} />
       </main>
       <Footer />
     </div>

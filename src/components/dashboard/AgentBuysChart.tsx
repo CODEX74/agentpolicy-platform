@@ -78,10 +78,9 @@ export function AgentBuysChart({ data }: { data: AgentBuyPoint[] }) {
                     }
                   />
                   <Tooltip
-                    formatter={(value: any) => [
-                      `${Number(value ?? 0).toFixed(2)} USDT`,
-                      'Покупка',
-                    ]}
+                    formatter={(value: any) =>
+                      `${Number(value ?? 0).toFixed(2)} USDT`
+                    }
                     labelFormatter={(label: any) => formatLabelDate(String(label))}
                   />
                   <Line

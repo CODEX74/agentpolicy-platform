@@ -189,6 +189,8 @@ export async function GET() {
           )
         : null;
 
+    const totalBuysCount = buysByAgentOverTime.length;
+
     const doc = new Document({
       sections: [
         {

@@ -26,6 +26,8 @@ const policySchema = z.object({
   timeRestrictionsEnabled: z.boolean().optional(),
   startHour: z.number().min(0).max(23),
   endHour: z.number().min(0).max(23),
+  minHoldingValue: z.number().min(0).optional(),
+  minHoldingUnit: z.enum(['minutes', 'hours', 'days', 'months', 'years']).optional(),
   notifyEmail: z.boolean().optional(),
   notifyTelegram: z.boolean().optional(),
   onEachTransaction: z.boolean().optional(),
@@ -49,6 +51,8 @@ const defaultValues: PolicyFormValues = {
   timeRestrictionsEnabled: false,
   startHour: 0,
   endHour: 23,
+  minHoldingValue: 60,
+  minHoldingUnit: 'minutes',
   notifyEmail: true,
   notifyTelegram: false,
   onEachTransaction: true,
@@ -130,7 +134,8 @@ export function PolicyBuilder({ agentId, initialPolicy, onSave }: PolicyBuilderP
       setSaveStatus('success');
       return;
     }
-    const num = (v: unknown): number => (typeof v === 'number' && !Number.isNaN(v) ? v : 0);
+    const num = (v: unknown, fallback = 0): number =>
+      typeof v === 'number' && !Number.isNaN(v) ? v : fallback;
     const arr = (v: unknown): string[] => {
       if (Array.isArray(v)) return v.filter((x): x is string => typeof x === 'string');
       if (typeof v === 'string' && v) return [v];
@@ -142,6 +147,15 @@ export function PolicyBuilder({ agentId, initialPolicy, onSave }: PolicyBuilderP
       weeklyLimit: num(data.weeklyLimit),
       maxPerTransaction: num(data.maxPerTransaction),
       allowedOperations: arr(data.allowedOperations),
+      timeRestrictions: {
+        enabled: Boolean(data.timeRestrictionsEnabled),
+        startHour: num(data.startHour, 0),
+        endHour: num(data.endHour, 23),
+        minHolding: {
+          value: num(data.minHoldingValue, 60),
+          unit: data.minHoldingUnit ?? 'minutes',
+        },
+      },
       notifications: {
         email: Boolean(data.notifyEmail),
         telegram: Boolean(data.notifyTelegram),
@@ -203,6 +217,37 @@ export function PolicyBuilder({ agentId, initialPolicy, onSave }: PolicyBuilderP
 
       <Card>
         <CardHeader>
+          <h3 className="text-lg font-medium">Минимальный срок удержания</h3>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <p className="text-xs text-zinc-600 dark:text-zinc-400">
+            Минимальное время, через которое агент обязан зафиксировать хотя бы одну сделку (продажу).
+            Используется и для Инвестора, и для Трейдера.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="number"
+              step="1"
+              min="0"
+              className="w-24"
+              {...register('minHoldingValue', { valueAsNumber: true })}
+            />
+            <select
+              {...register('minHoldingUnit')}
+              className="rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-800"
+            >
+              <option value="minutes">минут</option>
+              <option value="hours">часов</option>
+              <option value="days">дней</option>
+              <option value="months">месяцев</option>
+              <option value="years">лет</option>
+            </select>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <h3 className="text-lg font-medium">Разрешённые операции</h3>
         </CardHeader>
         <CardContent className="space-y-2">
@@ -244,6 +289,15 @@ export function PolicyBuilder({ agentId, initialPolicy, onSave }: PolicyBuilderP
                 Настройки → Telegram
               </Link>
               .
+            </p>
+          )}
+          {telegramLinked && (
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Бот Telegram:{' '}
+              <Link href="https://t.me/AgentPolicyBot" target="_blank" rel="noopener noreferrer" className="underline">
+                @AgentPolicyBot
+              </Link>
+              . Напишите ему /start и /balance, чтобы увидеть статусы агентов.
             </p>
           )}
           {openaiHasKey === false && (

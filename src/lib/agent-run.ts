@@ -81,6 +81,29 @@ export async function runAgentOnce(
   const [marketPrices, usdtPrice] = await Promise.all([getMarketPrices(), getUsdtPriceUsd()]);
   const marketTrend = getMockMarketTrend();
 
+  // Конфигурируемый минимальный срок удержания (через который агент должен что-то продать).
+  // Хранится в policy.timeRestrictions.minHolding.{value,unit}. По умолчанию 60 минут.
+  let minHoldingIntervalMinutes = 60;
+  const tr = (policyRow?.timeRestrictions as
+    | { minHolding?: { value?: number; unit?: string } }
+    | null) ?? {};
+  const mh = tr.minHolding;
+  if (mh && typeof mh.value === 'number' && !Number.isNaN(mh.value) && mh.value > 0) {
+    const unit = mh.unit ?? 'minutes';
+    const v = mh.value;
+    const toMinutes =
+      unit === 'hours'
+        ? v * 60
+        : unit === 'days'
+          ? v * 60 * 24
+          : unit === 'months'
+            ? v * 60 * 24 * 30
+            : unit === 'years'
+              ? v * 60 * 24 * 365
+              : v; // minutes
+    minHoldingIntervalMinutes = Math.max(1, Math.floor(toMinutes));
+  }
+
   const openaiKey = await getOpenAiKeyByEmail(userEmail);
   if (!openaiKey) {
     await addDemoTransaction({
@@ -142,14 +165,13 @@ export async function runAgentOnce(
     assetPriceUsd: decision.asset ? marketPrices[decision.asset] : undefined,
   };
 
-  // Для трейдера: если за последние 60 минут не было ни одной продажи и есть открытая позиция —
+  // Для трейдера: если за последние N минут (из политики) не было ни одной продажи и есть открытая позиция —
   // принудительно перевести решение в sell_eth по самой крупной позиции.
   if (agent.agentType === 'TRADER') {
-    const MUST_SELL_INTERVAL_MIN = 60;
     const hadRecentSell = await hasSellInLastMinutes({
       agentId,
       userEmail,
-      minutes: MUST_SELL_INTERVAL_MIN,
+      minutes: minHoldingIntervalMinutes,
     });
     if (!hadRecentSell) {
       const positions = await getDemoPositions(agentId, userEmail);
@@ -162,7 +184,7 @@ export async function runAgentOnce(
           ...decision,
           action: 'sell_eth',
           asset: largest.asset,
-          reason: `Принудительная фиксация: не было ни одной продажи за последние ${MUST_SELL_INTERVAL_MIN} минут. ${decision.reason}`,
+          reason: `Принудительная фиксация: не было ни одной продажи за последние ${minHoldingIntervalMinutes} минут. ${decision.reason}`,
         };
       }
     }

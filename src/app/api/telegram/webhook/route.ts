@@ -245,11 +245,12 @@ export async function POST(req: NextRequest) {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        let totalNet = 0;
-        const lines: string[] = ['📈 Результат торгов за сегодня', ''];
+        let totalNetToday = 0;
+        let totalNetAllTime = 0;
+        const lines: string[] = ['📈 Результат торгов', ''];
 
         for (const agent of agents) {
-          const txs = await prisma.demoTransaction.findMany({
+          const txsToday = await prisma.demoTransaction.findMany({
             where: {
               agentId: agent.id,
               userId: user!.id,
@@ -257,29 +258,52 @@ export async function POST(req: NextRequest) {
               type: { in: ['buy_eth', 'sell_eth'] },
             },
           });
-          if (!txs.length) {
+          const txsAll = await prisma.demoTransaction.findMany({
+            where: {
+              agentId: agent.id,
+              userId: user!.id,
+              type: { in: ['buy_eth', 'sell_eth'] },
+            },
+          });
+
+          if (!txsToday.length && !txsAll.length) {
             lines.push(`• ${agent.name}`);
-            lines.push('  Сделок сегодня не было.');
+            lines.push('  Сделок пока не было.');
             lines.push('');
             continue;
           }
-          const totalBuys = txs
+          const totalBuysToday = txsToday
             .filter((t) => t.type === 'buy_eth')
             .reduce((sum, t) => sum + t.amountEth, 0);
-          const totalSells = txs
+          const totalSellsToday = txsToday
             .filter((t) => t.type === 'sell_eth')
             .reduce((sum, t) => sum + t.amountEth, 0);
-          const net = totalSells - totalBuys;
-          totalNet += net;
+          const netToday = totalSellsToday - totalBuysToday;
+          totalNetToday += netToday;
+
+          const totalBuysAll = txsAll
+            .filter((t) => t.type === 'buy_eth')
+            .reduce((sum, t) => sum + t.amountEth, 0);
+          const totalSellsAll = txsAll
+            .filter((t) => t.type === 'sell_eth')
+            .reduce((sum, t) => sum + t.amountEth, 0);
+          const netAll = totalSellsAll - totalBuysAll;
+          totalNetAllTime += netAll;
 
           lines.push(`• ${agent.name}`);
-          lines.push(`  Куплено за сегодня: ${totalBuys.toFixed(2)} USDT`);
-          lines.push(`  Продано за сегодня: ${totalSells.toFixed(2)} USDT`);
-          lines.push(`  PnL за сегодня: ${net >= 0 ? '+' : ''}${net.toFixed(2)} USDT`);
+          lines.push(`  Куплено за сегодня: ${totalBuysToday.toFixed(2)} USDT`);
+          lines.push(`  Продано за сегодня: ${totalSellsToday.toFixed(2)} USDT`);
+          lines.push(`  PnL за сегодня: ${netToday >= 0 ? '+' : ''}${netToday.toFixed(2)} USDT`);
+          lines.push(`  PnL за всё время: ${netAll >= 0 ? '+' : ''}${netAll.toFixed(2)} USDT`);
           lines.push('');
         }
 
-        lines.push(`Итого по всем агентам за сегодня: ${totalNet >= 0 ? '+' : ''}${totalNet.toFixed(2)} USDT`);
+        lines.push(
+          `Итого по всем агентам за сегодня: ${totalNetToday >= 0 ? '+' : ''}${totalNetToday.toFixed(2)} USDT`
+        );
+        lines.push(
+          `Итого по всем агентам за всё время: ${totalNetAllTime >= 0 ? '+' : ''}${totalNetAllTime.toFixed(2)} USDT`
+        );
         const r = await sendTelegramMessageToChat(lines.join('\n').slice(0, 4096), chatIdStr);
         if (!r.ok) console.error('[Telegram webhook] /profit message failed:', r.error);
       } catch (err) {

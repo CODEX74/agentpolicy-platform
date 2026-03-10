@@ -42,7 +42,23 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
     where: { userId_agentId: { userId: user.id, agentId: id } },
   });
   const fp = policyRow;
-  let initialPolicy: { dailyLimit: number; weeklyLimit: number; maxPerTransaction: number; allowedOperations: ('buy' | 'sell' | 'swap' | 'hold')[] } | undefined;
+  let initialPolicy:
+    | {
+        dailyLimit: number;
+        weeklyLimit: number;
+        maxPerTransaction: number;
+        allowedOperations: ('buy' | 'sell' | 'swap' | 'hold')[];
+        timeRestrictionsEnabled?: boolean;
+        startHour?: number;
+        endHour?: number;
+        minHoldingValue?: number;
+        minHoldingUnit?: 'minutes' | 'hours' | 'days' | 'months' | 'years';
+        notifyEmail?: boolean;
+        notifyTelegram?: boolean;
+        onEachTransaction?: boolean;
+        onLimitExceeded?: boolean;
+      }
+    | undefined;
   if (fp) {
     const ops = (fp.allowedOperations || [])
       .map(mapOp)
@@ -50,11 +66,46 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
         (o: (typeof ALLOWED_OPS)[number] | null): o is (typeof ALLOWED_OPS)[number] =>
           o != null
       );
+    const tr = (fp.timeRestrictions as
+      | {
+          enabled?: boolean;
+          startHour?: number;
+          endHour?: number;
+          minHolding?: { value?: number; unit?: string };
+        }
+      | null) ?? {};
+    const notif = (fp.notifications as
+      | {
+          email?: boolean;
+          telegram?: boolean;
+          onEachTransaction?: boolean;
+          onLimitExceeded?: boolean;
+        }
+      | null) ?? {};
+    const minHolding = tr.minHolding ?? {};
     initialPolicy = {
       dailyLimit: fp.dailyLimit,
       weeklyLimit: fp.weeklyLimit,
       maxPerTransaction: fp.maxPerTransaction,
       allowedOperations: ops.length ? ops : ['buy', 'hold'],
+      timeRestrictionsEnabled: Boolean(tr.enabled),
+      startHour: typeof tr.startHour === 'number' ? tr.startHour : 0,
+      endHour: typeof tr.endHour === 'number' ? tr.endHour : 23,
+      minHoldingValue:
+        typeof minHolding.value === 'number' && !Number.isNaN(minHolding.value)
+          ? minHolding.value
+          : 60,
+      minHoldingUnit:
+        minHolding.unit === 'hours' ||
+        minHolding.unit === 'days' ||
+        minHolding.unit === 'months' ||
+        minHolding.unit === 'years'
+          ? minHolding.unit
+          : 'minutes',
+      notifyEmail: notif.email ?? true,
+      notifyTelegram: notif.telegram ?? false,
+      onEachTransaction: notif.onEachTransaction ?? true,
+      onLimitExceeded: notif.onLimitExceeded ?? true,
     };
   }
 

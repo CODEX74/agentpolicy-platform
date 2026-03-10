@@ -35,9 +35,19 @@ export function Footer() {
             </p>
           </div>
         </div>
-        <p className="mt-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
-          © {new Date().getFullYear()} {appName}. Все права защищены.
-        </p>
+        <div className="mt-8 space-y-2 text-center text-sm text-zinc-500 dark:text-zinc-400">
+          <p>
+            © {new Date().getFullYear()} {appName}. Все права защищены.
+          </p>
+          <p>
+            Сайт и разработчики не несут ответственности за решения и действия агентов. Не является финансовой рекомендацией.
+          </p>
+          <p>
+            <Link href="/privacy" className="underline hover:text-zinc-700 dark:hover:text-zinc-200">
+              Политика конфиденциальности и отказ от ответственности
+            </Link>
+          </p>
+        </div>
       </div>
     </footer>
   );

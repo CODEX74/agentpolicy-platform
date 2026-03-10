@@ -11,7 +11,7 @@ function getLang(searchParams?: { lang?: string }): Lang {
 }
 
 export default function HowItWorksPage({ searchParams }: { searchParams?: { lang?: string } }) {
-  const lang = getLang(searchParams);
+  getLang(searchParams);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -20,7 +20,7 @@ export default function HowItWorksPage({ searchParams }: { searchParams?: { lang
       </Suspense>
       <main className="flex-1 py-12">
         <Suspense fallback={null}>
-          <HowItWorks lang={lang} />
+          <HowItWorks />
         </Suspense>
       </main>
       <Footer />

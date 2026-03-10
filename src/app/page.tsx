@@ -15,7 +15,8 @@ function getLang(searchParams?: { lang?: string }): Lang {
 }
 
 export default function Home({ searchParams }: { searchParams?: { lang?: string } }) {
-  const lang = getLang(searchParams);
+  // Пока язык для SEO/метатегов не используем, но оставляем хелпер для будущего
+  getLang(searchParams);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -24,11 +25,11 @@ export default function Home({ searchParams }: { searchParams?: { lang?: string 
       </Suspense>
       <main className="flex-1">
         <Suspense fallback={null}>
-          <Hero lang={lang} />
-          <Features lang={lang} />
-          <HowItWorks lang={lang} />
-          <Pricing lang={lang} />
-          <CTA lang={lang} />
+          <Hero />
+          <Features />
+          <HowItWorks />
+          <Pricing />
+          <CTA />
         </Suspense>
       </main>
       <Footer />

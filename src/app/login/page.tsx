@@ -42,11 +42,23 @@ export default function LoginPage() {
           setTimeout(() => reject(new Error('timeout')), timeoutMs)
         ),
       ]);
-      if (res && typeof res === 'object' && 'ok' in res && res.ok && res.url) {
-        router.push(res.url);
-        return;
+      if (res && typeof res === 'object') {
+        if ('ok' in res && res.ok && 'url' in res && res.url) {
+          router.push(res.url);
+          return;
+        }
+        if ('error' in res && res.error) {
+          if (res.error === 'CredentialsSignin') {
+            setError('Неверный email или пароль. Зарегистрируйтесь, если ещё нет аккаунта.');
+          } else if (res.error === 'Configuration') {
+            setError('Ошибка конфигурации авторизации. Проверьте настройки сервера.');
+          } else {
+            setError('Ошибка входа. Попробуйте ещё раз или воспользуйтесь другим способом входа.');
+          }
+          return;
+        }
       }
-      setError('Неверный email или пароль. Зарегистрируйтесь, если ещё нет аккаунта.');
+      setError('Ошибка входа. Проверьте подключение к базе данных.');
     } catch (err) {
       if (err instanceof Error && err.message === 'timeout') {
         setError('Сервер не отвечает. Проверьте подключение к интернету.');
@@ -137,30 +149,34 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="text-center">
-          <button
-            type="button"
-            onClick={handleGoogle}
+        <div className="space-y-3">
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={handleGoogle}
+              className={cn(
+                buttonVariants({ variant: 'outline', size: 'default' }),
+                'w-full'
+              )}
+            >
+              Войти через Google
+            </button>
+          </div>
+          <Link
+            href="/register"
             className={cn(
-              buttonVariants({ variant: 'outline', size: 'default' }),
-              'w-full'
+              buttonVariants({ size: 'default', variant: 'secondary' }),
+              'w-full font-semibold'
             )}
           >
-            Войти через Google
-          </button>
+            Нет аккаунта? Зарегистрироваться
+          </Link>
         </div>
 
-        <p className="text-center text-sm text-zinc-500 space-y-1">
-          <span className="block">
-            <Link href="/register" className="underline hover:text-zinc-700 dark:hover:text-zinc-300">
-              Регистрация
-            </Link>
-          </span>
-          <span className="block">
-            <Link href="/" className="underline hover:text-zinc-700 dark:hover:text-zinc-300">
-              ← На главную
-            </Link>
-          </span>
+        <p className="text-center text-sm text-zinc-500 mt-3">
+          <Link href="/" className="underline hover:text-zinc-700 dark:hover:text-zinc-300">
+            ← На главную
+          </Link>
         </p>
       </div>
     </div>

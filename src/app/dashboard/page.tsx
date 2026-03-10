@@ -3,8 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { QuickActions } from '@/components/dashboard/QuickActions';
-import { BalanceChart } from '@/components/dashboard/BalanceChart';
 import { AgentList } from '@/components/dashboard/AgentList';
+import { DashboardBalanceSection } from '@/components/dashboard/DashboardBalanceSection';
 import { prisma } from '@/lib/db/prisma';
 import { getOpenAiKeyByEmail } from '@/lib/db/user-openai';
 
@@ -21,8 +21,6 @@ export default async function DashboardPage() {
   ]);
   const agents = user?.agents ?? [];
 
-  const chartData = [{ date: new Date().toISOString().slice(0, 10), balance: 0 }];
-
   return (
     <DashboardLayout>
       <div className="space-y-8">
@@ -32,7 +30,7 @@ export default async function DashboardPage() {
         </div>
         <section>
           <h2 className="mb-4 text-lg font-semibold">Баланс</h2>
-          <BalanceChart data={chartData} />
+          <DashboardBalanceSection />
         </section>
         <section>
           <h2 className="mb-4 text-lg font-semibold">Агенты</h2>

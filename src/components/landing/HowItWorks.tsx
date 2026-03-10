@@ -1,3 +1,6 @@
+ 'use client';
+
+import { useSearchParams } from 'next/navigation';
 type Lang = 'ru' | 'en';
 
 const stepsByLang: Record<
@@ -56,8 +59,11 @@ const stepsByLang: Record<
   },
 };
 
-export function HowItWorks({ lang }: { lang: Lang }) {
-  const t = stepsByLang[lang] ?? stepsByLang.ru;
+export function HowItWorks({ lang }: { lang?: Lang }) {
+  const searchParams = useSearchParams();
+  const paramLang = searchParams.get('lang') === 'en' ? 'en' : 'ru';
+  const activeLang: Lang = lang ?? paramLang;
+  const t = stepsByLang[activeLang] ?? stepsByLang.ru;
 
   return (
     <section className="py-20 sm:py-24">

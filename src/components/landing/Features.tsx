@@ -1,3 +1,6 @@
+ 'use client';
+
+import { useSearchParams } from 'next/navigation';
 import { Shield, Wallet, Bell, Sliders } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 
@@ -75,8 +78,11 @@ const featuresByLang: Record<
   },
 };
 
-export function Features({ lang }: { lang: Lang }) {
-  const t = featuresByLang[lang] ?? featuresByLang.ru;
+export function Features({ lang }: { lang?: Lang }) {
+  const searchParams = useSearchParams();
+  const paramLang = searchParams.get('lang') === 'en' ? 'en' : 'ru';
+  const activeLang: Lang = lang ?? paramLang;
+  const t = featuresByLang[activeLang] ?? featuresByLang.ru;
 
   return (
     <section className="py-20 dark:bg-zinc-900/50 sm:py-24">

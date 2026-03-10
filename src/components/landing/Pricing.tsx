@@ -1,3 +1,6 @@
+ 'use client';
+
+import { useSearchParams } from 'next/navigation';
 import { PRICING_PLANS } from '@/lib/constants/pricing';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/Card';
@@ -19,8 +22,11 @@ const pricingText: Record<Lang, { title: string; subtitle: string; choose: strin
   },
 };
 
-export function Pricing({ lang }: { lang: Lang }) {
-  const t = pricingText[lang] ?? pricingText.ru;
+export function Pricing({ lang }: { lang?: Lang }) {
+  const searchParams = useSearchParams();
+  const paramLang = searchParams.get('lang') === 'en' ? 'en' : 'ru';
+  const activeLang: Lang = lang ?? paramLang;
+  const t = pricingText[activeLang] ?? pricingText.ru;
 
   return (
     <section className="py-20 dark:bg-zinc-900/50 sm:py-24">

@@ -1,3 +1,6 @@
+ 'use client';
+
+import { useSearchParams } from 'next/navigation';
 import { buttonVariants } from '@/lib/utils/button-variants';
 import { cn } from '@/lib/utils/cn';
 
@@ -30,8 +33,11 @@ const content: Record<
   },
 };
 
-export function Hero({ lang }: { lang: Lang }) {
-  const t = content[lang] ?? content.ru;
+export function Hero({ lang }: { lang?: Lang }) {
+  const searchParams = useSearchParams();
+  const paramLang = searchParams.get('lang') === 'en' ? 'en' : 'ru';
+  const activeLang: Lang = lang ?? paramLang;
+  const t = content[activeLang] ?? content.ru;
 
   return (
     <section className="relative overflow-hidden py-20 sm:py-24 lg:py-32">

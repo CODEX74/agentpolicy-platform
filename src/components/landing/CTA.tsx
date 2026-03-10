@@ -1,3 +1,6 @@
+ 'use client';
+
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 
 type Lang = 'ru' | 'en';
@@ -16,8 +19,11 @@ const ctaText: Record<Lang, { title: string; subtitle: string; cta: string }> = 
   },
 };
 
-export function CTA({ lang }: { lang: Lang }) {
-  const t = ctaText[lang] ?? ctaText.ru;
+export function CTA({ lang }: { lang?: Lang }) {
+  const searchParams = useSearchParams();
+  const paramLang = searchParams.get('lang') === 'en' ? 'en' : 'ru';
+  const activeLang: Lang = lang ?? paramLang;
+  const t = ctaText[activeLang] ?? ctaText.ru;
 
   return (
     <section className="py-20 sm:py-24">

@@ -23,11 +23,13 @@ export default function Home({ searchParams }: { searchParams?: { lang?: string 
         <Header />
       </Suspense>
       <main className="flex-1">
-        <Hero lang={lang} />
-        <Features lang={lang} />
-        <HowItWorks lang={lang} />
-        <Pricing lang={lang} />
-        <CTA lang={lang} />
+        <Suspense fallback={null}>
+          <Hero lang={lang} />
+          <Features lang={lang} />
+          <HowItWorks lang={lang} />
+          <Pricing lang={lang} />
+          <CTA lang={lang} />
+        </Suspense>
       </main>
       <Footer />
     </div>

@@ -19,7 +19,9 @@ export default function PricingPage({ searchParams }: { searchParams?: { lang?: 
         <Header />
       </Suspense>
       <main className="flex-1 py-12">
-        <Pricing lang={lang} />
+        <Suspense fallback={null}>
+          <Pricing lang={lang} />
+        </Suspense>
       </main>
       <Footer />
     </div>

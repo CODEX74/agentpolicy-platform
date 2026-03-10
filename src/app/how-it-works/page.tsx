@@ -19,7 +19,9 @@ export default function HowItWorksPage({ searchParams }: { searchParams?: { lang
         <Header />
       </Suspense>
       <main className="flex-1 py-12">
-        <HowItWorks lang={lang} />
+        <Suspense fallback={null}>
+          <HowItWorks lang={lang} />
+        </Suspense>
       </main>
       <Footer />
     </div>

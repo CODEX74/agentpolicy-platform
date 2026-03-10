@@ -113,7 +113,7 @@ export function AnalyticsClient() {
             </div>
           </section>
 
-          <section>
+          <section className="pb-4">
             <h2 className="text-lg font-semibold">Сумма на одну покупку по агентам</h2>
             <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
               Объём покупок в USDT по дням для каждого агента отдельно.
@@ -123,7 +123,7 @@ export function AnalyticsClient() {
             </div>
           </section>
 
-          <div className="pt-4">
+          <div className="mt-8 pt-4 border-t border-zinc-200 dark:border-zinc-800">
             <Button
               type="button"
               className="w-full sm:w-auto"

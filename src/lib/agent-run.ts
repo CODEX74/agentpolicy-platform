@@ -5,6 +5,7 @@ import {
   addDemoTransaction,
   getDemoPositions,
   getOldestBuyAtForAsset,
+  hasSellInLastMinutes,
 } from '@/lib/db/demo-transactions';
 import {
   getUsdtPriceUsd,
@@ -116,7 +117,7 @@ export async function runAgentOnce(
     marketTrend,
   });
 
-  const decision = result.decision;
+  let decision = result.decision;
   if (!decision) {
     return {
       ok: false,
@@ -140,6 +141,32 @@ export async function runAgentOnce(
     plans: decision.plans,
     assetPriceUsd: decision.asset ? marketPrices[decision.asset] : undefined,
   };
+
+  // Для трейдера: если за последние 60 минут не было ни одной продажи и есть открытая позиция —
+  // принудительно перевести решение в sell_eth по самой крупной позиции.
+  if (agent.agentType === 'TRADER') {
+    const MUST_SELL_INTERVAL_MIN = 60;
+    const hadRecentSell = await hasSellInLastMinutes({
+      agentId,
+      userEmail,
+      minutes: MUST_SELL_INTERVAL_MIN,
+    });
+    if (!hadRecentSell) {
+      const positions = await getDemoPositions(agentId, userEmail);
+      const nonEmpty = positions.filter((p) => p.quantity > 0);
+      if (nonEmpty.length > 0 && decision.action !== 'sell_eth') {
+        const largest = nonEmpty.reduce((a, b) =>
+          a.quantity * a.avgPriceUsd >= b.quantity * b.avgPriceUsd ? a : b
+        );
+        decision = {
+          ...decision,
+          action: 'sell_eth',
+          asset: largest.asset,
+          reason: `Принудительная фиксация: не было ни одной продажи за последние ${MUST_SELL_INTERVAL_MIN} минут. ${decision.reason}`,
+        };
+      }
+    }
+  }
 
   if (decision.action === 'hold' || amount === 0) {
     await addDemoTransaction({

@@ -30,6 +30,26 @@ export async function getOldestBuyAtForAsset(params: {
   return row?.createdAt ?? null;
 }
 
+export async function hasSellInLastMinutes(params: {
+  agentId: string;
+  userEmail: string;
+  minutes: number;
+}): Promise<boolean> {
+  const user = await prisma.user.findUnique({ where: { email: params.userEmail.toLowerCase() } });
+  if (!user) return false;
+
+  const since = new Date(Date.now() - params.minutes * 60 * 1000);
+  const count = await prisma.demoTransaction.count({
+    where: {
+      agentId: params.agentId,
+      userId: user.id,
+      type: 'sell_eth',
+      createdAt: { gte: since },
+    },
+  });
+  return count > 0;
+}
+
 export async function getDemoTransactionsByAgent(
   agentId: string,
   userEmail: string

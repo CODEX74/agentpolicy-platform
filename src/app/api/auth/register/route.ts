@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { hashPassword } from '@/lib/auth/password';
+import { sendEmail } from '@/lib/email';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -8,6 +9,10 @@ const schema = z.object({
   password: z.string().min(6, 'Пароль не менее 6 символов'),
   name: z.string().min(1).max(200).optional(),
 });
+
+function generateCode(): string {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,7 +34,42 @@ export async function POST(req: NextRequest) {
     await prisma.user.create({
       data: { email, name, password: hashed },
     });
-    return NextResponse.json({ ok: true });
+
+    const code = generateCode();
+    const expires = new Date(Date.now() + 15 * 60 * 1000);
+
+    // Используем стандартную таблицу VerificationToken
+    await prisma.verificationToken.upsert({
+      where: { token: code },
+      update: {
+        identifier: email,
+        expires,
+      },
+      create: {
+        identifier: email,
+        token: code,
+        expires,
+      },
+    });
+
+    try {
+      await sendEmail({
+        to: email,
+        subject: 'Подтверждение регистрации в AgentPolicy',
+        text: `Ваш код подтверждения: ${code}\n\nКод действует 15 минут. Введите его на странице подтверждения email.`,
+      });
+    } catch (e) {
+      console.error('Failed to send verification email', e);
+      return NextResponse.json(
+        {
+          error:
+            'Не удалось отправить письмо с кодом подтверждения. Проверьте настройки почты на сервере.',
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ ok: true, requiresVerification: true });
   } catch (e) {
     if (e instanceof z.ZodError) {
       return NextResponse.json({ error: e.flatten() }, { status: 400 });

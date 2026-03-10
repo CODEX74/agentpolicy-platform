@@ -44,7 +44,7 @@ export default function RegisterPage() {
         setLoading(false);
         return;
       }
-      router.push('/login?registered=1');
+      router.push(`/verify-email?email=${encodeURIComponent(data.email)}`);
     } catch {
       setError('Ошибка. Проверьте подключение к интернету и к базе данных.');
       setLoading(false);

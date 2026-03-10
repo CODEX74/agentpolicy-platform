@@ -117,7 +117,16 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div className="relative">
+        <div className="flex justify-end">
+          <Link
+            href="/forgot-password"
+            className="text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 underline"
+          >
+            Забыли пароль?
+          </Link>
+        </div>
+
+        <div className="relative mt-4">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t border-zinc-200 dark:border-zinc-800" />
           </div>

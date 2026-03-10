@@ -1,0 +1,129 @@
+'use client';
+
+import { Suspense, useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Input } from '@/components/ui/Input';
+import { buttonVariants } from '@/lib/utils/button-variants';
+import { cn } from '@/lib/utils/cn';
+
+const schema = z.object({
+  email: z.string().email('Введите корректный email'),
+  code: z.string().min(6, 'Код из 6 цифр').max(6, 'Код из 6 цифр'),
+});
+
+type FormData = z.infer<typeof schema>;
+
+function VerifyEmailInner() {
+  const router = useRouter();
+  const params = useSearchParams();
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(schema),
+  });
+
+  useEffect(() => {
+    const emailParam = params.get('email');
+    if (emailParam) {
+      setValue('email', emailParam);
+    }
+  }, [params, setValue]);
+
+  const onSubmit = async (data: FormData) => {
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json.error || 'Неверный код подтверждения');
+        setLoading(false);
+        return;
+      }
+      router.push('/login?verified=1');
+    } catch {
+      setError('Ошибка. Проверьте подключение к интернету и к базе данных.');
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4">
+      <div className="w-full max-w-sm space-y-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+            Подтверждение email
+          </h1>
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+            Мы отправили код подтверждения на вашу почту. Введите его ниже.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
+            <Input
+              {...register('email')}
+              type="email"
+              placeholder="Email"
+              autoComplete="email"
+              className="w-full"
+            />
+            {errors.email && (
+              <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+            )}
+          </div>
+          <div>
+            <Input
+              {...register('code')}
+              type="text"
+              placeholder="Код из письма (6 цифр)"
+              inputMode="numeric"
+              maxLength={6}
+              className="w-full tracking-[0.3em] text-center"
+            />
+            {errors.code && (
+              <p className="mt-1 text-sm text-red-600">{errors.code.message}</p>
+            )}
+          </div>
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 dark:bg-red-950/50 p-3 rounded-lg">
+              {error}
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={loading}
+            className={cn(buttonVariants({ size: 'default' }), 'w-full')}
+          >
+            {loading ? 'Проверка...' : 'Подтвердить email'}
+          </button>
+        </form>
+
+        <p className="text-center text-sm text-zinc-500">
+          Уже подтвердили?{' '}
+          <Link href="/login" className="underline hover:text-zinc-700 dark:hover:text-zinc-300">
+            Войти
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense>
+      <VerifyEmailInner />
+    </Suspense>
+  );
+}
+

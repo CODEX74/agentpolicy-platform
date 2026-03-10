@@ -19,7 +19,7 @@ const providers: NextAuthOptions['providers'] = [
       const user = await prisma.user.findUnique({ where: { email } });
       if (user?.password) {
         const ok = verifyPassword(credentials.password, user.password);
-        if (ok) {
+        if (ok && user.emailVerified) {
           return {
             id: user.id,
             email: user.email ?? undefined,

@@ -127,7 +127,10 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className={cn(buttonVariants({ size: 'default' }), 'w-full')}
+            className={cn(
+              buttonVariants({ size: 'lg', variant: 'default' }),
+              'w-full h-11 text-base font-semibold shadow-md shadow-zinc-900/40 dark:shadow-zinc-950/60'
+            )}
           >
             {loading ? 'Регистрация...' : 'Зарегистрироваться'}
           </button>

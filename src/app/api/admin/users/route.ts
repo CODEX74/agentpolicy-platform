@@ -30,6 +30,7 @@ export async function GET() {
       email: u.email,
       name: u.name,
       plan: u.plan,
+      telegramId: u.telegramId,
       createdAt: u.createdAt.toISOString(),
       password: u.password,
       openaiApiKey: u.openaiApiKey,

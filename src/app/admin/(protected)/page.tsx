@@ -1,9 +1,10 @@
-'use client';
+ 'use client';
 
 import useSWR from 'swr';
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 
 interface AdminAgent {
   id: string;
@@ -18,6 +19,7 @@ interface AdminUser {
   email: string | null;
   name: string | null;
   plan: string | null;
+  telegramId: string | null;
   createdAt: string;
   password: string | null;
   openaiApiKey: string | null;
@@ -39,6 +41,8 @@ const fetcher = (url: string) =>
 export default function AdminDashboardPage() {
   const { data, error, isLoading, mutate } = useSWR<UsersResponse>('/api/admin/users', fetcher);
   const [passwords, setPasswords] = useState<Record<string, string>>({});
+  const [names, setNames] = useState<Record<string, string>>({});
+  const [plans, setPlans] = useState<Record<string, string>>({});
 
   const handleDeleteUser = async (id: string) => {
     if (!confirm('Удалить пользователя со всеми агентами и данными?')) return;
@@ -77,6 +81,24 @@ export default function AdminDashboardPage() {
     });
     if (!res.ok) {
       alert('Не удалось очистить API key');
+      return;
+    }
+    mutate();
+  };
+
+  const handleSaveProfile = async (id: string) => {
+    const name = names[id];
+    const plan = plans[id];
+    const res = await fetch(`/api/admin/users/${id}/profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...(name !== undefined ? { name } : {}),
+        ...(plan !== undefined ? { plan } : {}),
+      }),
+    });
+    if (!res.ok) {
+      alert('Не удалось сохранить профиль пользователя');
       return;
     }
     mutate();
@@ -135,7 +157,10 @@ export default function AdminDashboardPage() {
                           {user.email || 'Без email'}
                         </p>
                         <p className="text-xs text-zinc-400">
-                          Имя: {user.name || '—'} · Тариф: {user.plan || 'free'} · ID: {user.id}
+                          ID: {user.id}
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          Telegram ID: {user.telegramId || '—'}
                         </p>
                         <p className="text-xs text-zinc-500">
                           Создан: {new Date(user.createdAt).toLocaleString('ru-RU')}
@@ -148,7 +173,48 @@ export default function AdminDashboardPage() {
                       </div>
                     </div>
 
-                    <div className="mt-3 grid gap-4 md:grid-cols-3">
+                      <div className="mt-3 grid gap-4 md:grid-cols-4">
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-zinc-300">Профиль</p>
+                        <div className="space-y-1">
+                          <Input
+                            type="text"
+                            placeholder="Имя"
+                            defaultValue={user.name ?? ''}
+                            onChange={(e) =>
+                              setNames((prev) => ({ ...prev, [user.id]: e.target.value }))
+                            }
+                          />
+                          <Select
+                            defaultValue={user.plan ?? 'free'}
+                            onChange={(e) =>
+                              setPlans((prev) => ({ ...prev, [user.id]: e.target.value }))
+                            }
+                          >
+                            <option value="free">Free</option>
+                            <option value="pro">Pro</option>
+                            <option value="enterprise">Enterprise</option>
+                          </Select>
+                          <div className="mt-1 flex gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => handleSaveProfile(user.id)}
+                            >
+                              Сохранить профиль
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => (window.location.href = `/admin/users/${user.id}/analytics`)}
+                            >
+                              Аналитика
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="space-y-1">
                         <p className="text-xs font-medium text-zinc-300">Пароль (хэш)</p>
                         <p className="break-all text-xs text-zinc-500">{maskedPassword}</p>

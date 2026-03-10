@@ -4,11 +4,18 @@ import { BalanceChart } from '@/components/dashboard/BalanceChart';
 import { AgentBalancesChart } from '@/components/dashboard/AgentBalancesChart';
 import { AssetAllocationChart } from '@/components/dashboard/AssetAllocationChart';
 import { PnlByAgentChart } from '@/components/dashboard/PnlByAgentChart';
+import { AgentBuysChart } from '@/components/dashboard/AgentBuysChart';
 import { useAnalytics } from '@/hooks/useAnalytics';
 
 export function AnalyticsClient() {
-  const { balanceHistory, agentBalances, assetAllocationByAgent, pnlByAgent, isLoading } =
-    useAnalytics();
+  const {
+    balanceHistory,
+    agentBalances,
+    assetAllocationByAgent,
+    pnlByAgent,
+    buysByAgentOverTime,
+    isLoading,
+  } = useAnalytics();
 
   return (
     <>
@@ -76,6 +83,16 @@ export function AnalyticsClient() {
             </p>
             <div className="mt-3">
               <PnlByAgentChart data={pnlByAgent} />
+            </div>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold">Суммы покупок по агентам</h2>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              Объём покупок (buy_eth) в USDT по дням для каждого агента отдельно.
+            </p>
+            <div className="mt-3">
+              <AgentBuysChart data={buysByAgentOverTime} />
             </div>
           </section>
         </div>

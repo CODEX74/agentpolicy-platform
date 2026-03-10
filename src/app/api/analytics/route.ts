@@ -118,11 +118,37 @@ export async function GET() {
       });
     }
 
+    // Покупки по дням для каждого агента
+    const buysByAgentAndDay = new Map<
+      string,
+      { agentId: string; name: string; date: string; buyAmount: number }[]
+    >();
+    for (const a of agents) {
+      buysByAgentAndDay.set(a.id, []);
+    }
+    for (const t of demo) {
+      if (!t.agentId || t.type !== 'buy_eth') continue;
+      const agentId = t.agentId;
+      const rec = agentBalances.find((ab) => ab.agentId === agentId);
+      const name = rec?.name ?? 'Agent';
+      const date = t.createdAt.slice(0, 10);
+      const list = buysByAgentAndDay.get(agentId);
+      if (!list) continue;
+      let dayRec = list.find((r) => r.date === date);
+      if (!dayRec) {
+        dayRec = { agentId, name, date, buyAmount: 0 };
+        list.push(dayRec);
+      }
+      dayRec.buyAmount += t.amountEth;
+    }
+    const buysByAgentOverTime = Array.from(buysByAgentAndDay.values()).flat();
+
     return NextResponse.json({
       balanceHistory,
       agentBalances,
       assetAllocationByAgent,
       pnlByAgent,
+      buysByAgentOverTime,
     });
   } catch (err) {
     console.error('GET /api/analytics', err);

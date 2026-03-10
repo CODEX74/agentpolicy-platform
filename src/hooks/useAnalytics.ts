@@ -13,6 +13,9 @@ export function useAnalytics() {
   const [pnlByAgent, setPnlByAgent] = useState<
     { agentId: string; name: string; pnlTotal: number }[]
   >([]);
+  const [buysByAgentOverTime, setBuysByAgentOverTime] = useState<
+    { agentId: string; name: string; date: string; buyAmount: number }[]
+  >([]);
   const [isLoading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,7 +23,13 @@ export function useAnalytics() {
       .then((res) =>
         res.ok
           ? res.json()
-          : { balanceHistory: [], agentBalances: [], assetAllocationByAgent: [], pnlByAgent: [] }
+          : {
+              balanceHistory: [],
+              agentBalances: [],
+              assetAllocationByAgent: [],
+              pnlByAgent: [],
+              buysByAgentOverTime: [],
+            }
       )
       .then((data) => {
         setBalanceHistory(Array.isArray(data.balanceHistory) ? data.balanceHistory : []);
@@ -29,15 +38,26 @@ export function useAnalytics() {
           Array.isArray(data.assetAllocationByAgent) ? data.assetAllocationByAgent : []
         );
         setPnlByAgent(Array.isArray(data.pnlByAgent) ? data.pnlByAgent : []);
+        setBuysByAgentOverTime(
+          Array.isArray(data.buysByAgentOverTime) ? data.buysByAgentOverTime : []
+        );
       })
       .catch(() => {
         setBalanceHistory([]);
         setAgentBalances([]);
         setAssetAllocationByAgent([]);
         setPnlByAgent([]);
+        setBuysByAgentOverTime([]);
       })
       .finally(() => setLoading(false));
   }, []);
 
-  return { balanceHistory, agentBalances, assetAllocationByAgent, pnlByAgent, isLoading };
+  return {
+    balanceHistory,
+    agentBalances,
+    assetAllocationByAgent,
+    pnlByAgent,
+    buysByAgentOverTime,
+    isLoading,
+  };
 }

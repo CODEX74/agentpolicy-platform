@@ -8,6 +8,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Cell,
 } from 'recharts';
 
 interface PnlRecord {
@@ -46,9 +47,15 @@ export function PnlByAgentChart({ data }: { data: PnlRecord[] }) {
           <Bar
             dataKey="pnlTotal"
             name="PnL, USDT"
-            fill="#22C55E"
             fillOpacity={0.7}
-          />
+          >
+            {data.map((entry, index) => (
+              <Cell
+                key={entry.agentId ?? index}
+                fill={entry.pnlTotal >= 0 ? '#22C55E' : '#EF4444'}
+              />
+            ))}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>

@@ -58,6 +58,11 @@ export function SettingsForm({
   const [profileError, setProfileError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [planError, setPlanError] = useState<string | null>(null);
+  const [emailChangeNew, setEmailChangeNew] = useState('');
+  const [emailChangeCode, setEmailChangeCode] = useState('');
+  const [emailChangeLoading, setEmailChangeLoading] = useState(false);
+  const [emailChangeMessage, setEmailChangeMessage] = useState<string | null>(null);
+  const [emailChangeError, setEmailChangeError] = useState<string | null>(null);
 
   const handleSaveProfile = async () => {
     setProfileError(null);
@@ -181,6 +186,72 @@ export function SettingsForm({
     }
   };
 
+  const handleRequestEmailChange = async () => {
+    setEmailChangeError(null);
+    setEmailChangeMessage(null);
+    if (!emailChangeNew.trim()) {
+      setEmailChangeError('Введите новый email');
+      return;
+    }
+    setEmailChangeLoading(true);
+    try {
+      const res = await fetch('/api/user/email-change/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newEmail: emailChangeNew.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setEmailChangeError(
+          typeof data?.error === 'string'
+            ? data.error
+            : 'Не удалось отправить код подтверждения'
+        );
+        return;
+      }
+      setEmailChangeMessage(
+        'Код подтверждения отправлен на новый email. Введите его ниже, чтобы завершить смену.'
+      );
+    } finally {
+      setEmailChangeLoading(false);
+    }
+  };
+
+  const handleConfirmEmailChange = async () => {
+    setEmailChangeError(null);
+    setEmailChangeMessage(null);
+    if (!emailChangeNew.trim() || !emailChangeCode.trim()) {
+      setEmailChangeError('Введите новый email и код подтверждения');
+      return;
+    }
+    setEmailChangeLoading(true);
+    try {
+      const res = await fetch('/api/user/email-change/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          newEmail: emailChangeNew.trim(),
+          code: emailChangeCode.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setEmailChangeError(
+          typeof data?.error === 'string'
+            ? data.error
+            : 'Не удалось подтвердить смену email'
+        );
+        return;
+      }
+      setEmailChangeMessage(
+        (data?.message as string) ||
+          'Email изменён. Войдите заново, используя новый адрес.'
+      );
+    } finally {
+      setEmailChangeLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-xl">
       <Card>
@@ -260,7 +331,59 @@ export function SettingsForm({
               Email
             </label>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">{email}</p>
-            <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-500">Изменить email нельзя</p>
+            <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-500">
+              Текущий email. Ниже вы можете запросить смену адреса по коду подтверждения.
+            </p>
+            <div className="mt-3 space-y-2">
+              <Input
+                type="email"
+                value={emailChangeNew}
+                onChange={(e) => setEmailChangeNew(e.target.value)}
+                placeholder="Новый email"
+                disabled={emailChangeLoading}
+                className="max-w-xs"
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={emailChangeLoading || !emailChangeNew.trim()}
+                  onClick={handleRequestEmailChange}
+                >
+                  Отправить код
+                </Button>
+                <Input
+                  type="text"
+                  value={emailChangeCode}
+                  onChange={(e) => setEmailChangeCode(e.target.value)}
+                  placeholder="Код из письма"
+                  disabled={emailChangeLoading}
+                  className="max-w-[140px]"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={
+                    emailChangeLoading ||
+                    !emailChangeNew.trim() ||
+                    !emailChangeCode.trim()
+                  }
+                  onClick={handleConfirmEmailChange}
+                >
+                  Подтвердить email
+                </Button>
+              </div>
+              {emailChangeMessage && (
+                <p className="mt-1 text-sm text-emerald-600 dark:text-emerald-400">
+                  {emailChangeMessage}
+                </p>
+              )}
+              {emailChangeError && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                  {emailChangeError}
+                </p>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

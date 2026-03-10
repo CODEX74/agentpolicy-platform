@@ -37,7 +37,7 @@ export function AgentBuysChart({ data }: { data: AgentBuyPoint[] }) {
   }
 
   return (
-    <div className="h-64 w-full space-y-4">
+    <div className="w-full space-y-4">
       {Array.from(
         data.reduce((map, point) => {
           if (!map.has(point.agentId)) map.set(point.agentId, []);

@@ -123,10 +123,18 @@ export async function GET() {
                 new TableRow({
                   children: [
                     new TableCell({
-                      children: [new Paragraph({ text: 'Дата', bold: true })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: 'Дата', bold: true })],
+                        }),
+                      ],
                     }),
                     new TableCell({
-                      children: [new Paragraph({ text: 'Объём, USDT', bold: true })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: 'Объём, USDT', bold: true })],
+                        }),
+                      ],
                     }),
                   ],
                 }),
@@ -165,10 +173,18 @@ export async function GET() {
                 new TableRow({
                   children: [
                     new TableCell({
-                      children: [new Paragraph({ text: 'Агент', bold: true })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: 'Агент', bold: true })],
+                        }),
+                      ],
                     }),
                     new TableCell({
-                      children: [new Paragraph({ text: 'Баланс, USDT', bold: true })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: 'Баланс, USDT', bold: true })],
+                        }),
+                      ],
                     }),
                   ],
                 }),
@@ -207,10 +223,18 @@ export async function GET() {
                 new TableRow({
                   children: [
                     new TableCell({
-                      children: [new Paragraph({ text: 'Агент', bold: true })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: 'Агент', bold: true })],
+                        }),
+                      ],
                     }),
                     new TableCell({
-                      children: [new Paragraph({ text: 'P&L, USDT', bold: true })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: 'P&L, USDT', bold: true })],
+                        }),
+                      ],
                     }),
                   ],
                 }),
@@ -259,22 +283,46 @@ export async function GET() {
                 new TableRow({
                   children: [
                     new TableCell({
-                      children: [new Paragraph({ text: 'Дата/время', bold: true })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: 'Дата/время', bold: true })],
+                        }),
+                      ],
                     }),
                     new TableCell({
-                      children: [new Paragraph({ text: 'Агент', bold: true })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: 'Агент', bold: true })],
+                        }),
+                      ],
                     }),
                     new TableCell({
-                      children: [new Paragraph({ text: 'Тип', bold: true })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: 'Тип', bold: true })],
+                        }),
+                      ],
                     }),
                     new TableCell({
-                      children: [new Paragraph({ text: 'Сумма, USDT', bold: true })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: 'Сумма, USDT', bold: true })],
+                        }),
+                      ],
                     }),
                     new TableCell({
-                      children: [new Paragraph({ text: 'Актив', bold: true })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: 'Актив', bold: true })],
+                        }),
+                      ],
                     }),
                     new TableCell({
-                      children: [new Paragraph({ text: 'Причина / планы', bold: true })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: 'Причина / планы', bold: true })],
+                        }),
+                      ],
                     }),
                   ],
                 }),
@@ -343,10 +391,18 @@ export async function GET() {
                 new TableRow({
                   children: [
                     new TableCell({
-                      children: [new Paragraph({ text: 'Актив', bold: true })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: 'Актив', bold: true })],
+                        }),
+                      ],
                     }),
                     new TableCell({
-                      children: [new Paragraph({ text: 'Цена, USD', bold: true })],
+                      children: [
+                        new Paragraph({
+                          children: [new TextRun({ text: 'Цена, USD', bold: true })],
+                        }),
+                      ],
                     }),
                   ],
                 }),
@@ -379,7 +435,7 @@ export async function GET() {
 
     const buffer = await Packer.toBuffer(doc);
 
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
         'Content-Type':

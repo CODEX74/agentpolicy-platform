@@ -5,6 +5,147 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PRICING_PLANS } from '@/lib/constants/pricing';
+import { useLang, type Lang } from '@/contexts/LanguageContext';
+
+const t: Record<Lang, {
+  openaiTitle: string;
+  openaiDesc: string;
+  openaiKeySaved: string;
+  openaiLabel: string;
+  save: string;
+  profile: string;
+  name: string;
+  namePlaceholder: string;
+  email: string;
+  emailHint: string;
+  newEmailPlaceholder: string;
+  sendCode: string;
+  codePlaceholder: string;
+  confirmEmail: string;
+  password: string;
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+  newPasswordPlaceholder: string;
+  changePassword: string;
+  telegram: string;
+  telegramDesc: string;
+  telegramLabel: string;
+  telegramPlaceholder: string;
+  plan: string;
+  planPerMonth: string;
+  savePlan: string;
+  planLocked: string;
+  errSave: string;
+  errPassword: string;
+  errPlan: string;
+  errEmailChange: string;
+  errConfirmEmail: string;
+  nameSaved: string;
+  passwordChanged: string;
+  planUpdated: string;
+  telegramSaved: string;
+  openaiSaved: string;
+  errPasswordsMismatch: string;
+  errPasswordMin: string;
+  errEnterNewEmail: string;
+  errEnterEmailAndCode: string;
+  codeSent: string;
+  emailChanged: string;
+}> = {
+  ru: {
+    openaiTitle: 'OpenAI (ChatGPT)',
+    openaiDesc: 'Для работы агента вам нужно указать свой OpenAI API key. Ключ хранится в вашем аккаунте.',
+    openaiKeySaved: 'Ключ уже сохранён. Если хотите заменить — вставьте новый и нажмите «Сохранить».',
+    openaiLabel: 'OpenAI API key',
+    save: 'Сохранить',
+    profile: 'Профиль',
+    name: 'Имя',
+    namePlaceholder: 'Ваше имя',
+    email: 'Email',
+    emailHint: 'Текущий email. Ниже вы можете запросить смену адреса по коду подтверждения.',
+    newEmailPlaceholder: 'Новый email',
+    sendCode: 'Отправить код',
+    codePlaceholder: 'Код из письма',
+    confirmEmail: 'Подтвердить email',
+    password: 'Пароль',
+    currentPassword: 'Текущий пароль',
+    newPassword: 'Новый пароль',
+    confirmNewPassword: 'Подтвердите новый пароль',
+    newPasswordPlaceholder: 'не менее 6 символов',
+    changePassword: 'Сменить пароль',
+    telegram: 'Telegram',
+    telegramDesc: 'Чтобы бот отправлял вам сообщения и отвечал на команды, привяжите ваш Telegram chat id. Напишите боту /start — он покажет ваш chat id.',
+    telegramLabel: 'Telegram chat id',
+    telegramPlaceholder: 'например: 123456789',
+    plan: 'Тарифный план',
+    planPerMonth: '/мес',
+    savePlan: 'Сохранить тариф',
+    planLocked: 'Текущий тариф: Смена тарифа доступна только для аккаунтов с входом по email/паролю.',
+    openaiSaved: 'API key сохранён',
+    errSave: 'Не удалось сохранить',
+    errPassword: 'Не удалось сменить пароль',
+    errPlan: 'Не удалось сменить тариф',
+    errEmailChange: 'Не удалось отправить код подтверждения',
+    errConfirmEmail: 'Не удалось подтвердить смену email',
+    nameSaved: 'Имя сохранено',
+    passwordChanged: 'Пароль изменён',
+    planUpdated: 'Тариф обновлён',
+    telegramSaved: 'Telegram привязан',
+    errPasswordsMismatch: 'Пароли не совпадают',
+    errPasswordMin: 'Пароль не менее 6 символов',
+    errEnterNewEmail: 'Введите новый email',
+    errEnterEmailAndCode: 'Введите новый email и код подтверждения',
+    codeSent: 'Код подтверждения отправлен на новый email. Введите его ниже, чтобы завершить смену.',
+    emailChanged: 'Email изменён. Войдите заново, используя новый адрес.',
+  },
+  en: {
+    openaiTitle: 'OpenAI (ChatGPT)',
+    openaiDesc: 'To run agents you need to provide your OpenAI API key. The key is stored in your account.',
+    openaiKeySaved: 'Key is already saved. To replace it, paste a new one and click Save.',
+    openaiLabel: 'OpenAI API key',
+    save: 'Save',
+    profile: 'Profile',
+    name: 'Name',
+    namePlaceholder: 'Your name',
+    email: 'Email',
+    emailHint: 'Current email. Below you can request a change via confirmation code.',
+    newEmailPlaceholder: 'New email',
+    sendCode: 'Send code',
+    codePlaceholder: 'Code from email',
+    confirmEmail: 'Confirm email',
+    password: 'Password',
+    currentPassword: 'Current password',
+    newPassword: 'New password',
+    confirmNewPassword: 'Confirm new password',
+    newPasswordPlaceholder: 'at least 6 characters',
+    changePassword: 'Change password',
+    telegram: 'Telegram',
+    telegramDesc: 'To receive messages and commands from the bot, link your Telegram chat id. Send /start to the bot — it will show your chat id.',
+    telegramLabel: 'Telegram chat id',
+    telegramPlaceholder: 'e.g. 123456789',
+    plan: 'Plan',
+    planPerMonth: '/mo',
+    savePlan: 'Save plan',
+    planLocked: 'Current plan: Plan change is only available for email/password accounts.',
+    openaiSaved: 'API key saved',
+    errSave: 'Failed to save',
+    errPassword: 'Failed to change password',
+    errPlan: 'Failed to change plan',
+    errEmailChange: 'Failed to send confirmation code',
+    errConfirmEmail: 'Failed to confirm email change',
+    nameSaved: 'Name saved',
+    passwordChanged: 'Password changed',
+    planUpdated: 'Plan updated',
+    telegramSaved: 'Telegram linked',
+    errPasswordsMismatch: 'Passwords do not match',
+    errPasswordMin: 'Password must be at least 6 characters',
+    errEnterNewEmail: 'Enter new email',
+    errEnterEmailAndCode: 'Enter new email and confirmation code',
+    codeSent: 'Confirmation code sent to the new email. Enter it below to complete the change.',
+    emailChanged: 'Email changed. Sign in again using the new address.',
+  },
+};
 
 interface SettingsFormProps {
   email: string;
@@ -21,6 +162,8 @@ export function SettingsForm({
   canChangePlan,
   initialTelegramId,
 }: SettingsFormProps) {
+  const lang = useLang();
+  const text = t[lang];
   const [name, setName] = useState(initialName);
   const [plan, setPlan] = useState(initialPlan);
   const [telegramId, setTelegramId] = useState(initialTelegramId);
@@ -76,10 +219,10 @@ export function SettingsForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setProfileError(typeof data?.error === 'string' ? data.error : 'Не удалось сохранить');
+        setProfileError(typeof data?.error === 'string' ? data.error : text.errSave);
         return;
       }
-      setProfileMessage('Имя сохранено');
+      setProfileMessage(text.nameSaved);
     } finally {
       setProfileLoading(false);
     }
@@ -89,11 +232,11 @@ export function SettingsForm({
     setPasswordError(null);
     setPasswordMessage(null);
     if (newPassword !== confirmPassword) {
-      setPasswordError('Пароли не совпадают');
+      setPasswordError(text.errPasswordsMismatch);
       return;
     }
     if (newPassword.length < 6) {
-      setPasswordError('Пароль не менее 6 символов');
+      setPasswordError(text.errPasswordMin);
       return;
     }
     setPasswordLoading(true);
@@ -108,10 +251,10 @@ export function SettingsForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setPasswordError(typeof data?.error === 'string' ? data.error : 'Не удалось сменить пароль');
+        setPasswordError(typeof data?.error === 'string' ? data.error : text.errPassword);
         return;
       }
-      setPasswordMessage('Пароль изменён');
+      setPasswordMessage(text.passwordChanged);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -132,10 +275,10 @@ export function SettingsForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setPlanError(typeof data?.error === 'string' ? data.error : 'Не удалось сменить тариф');
+        setPlanError(typeof data?.error === 'string' ? data.error : text.errPlan);
         return;
       }
-      setPlanMessage('Тариф обновлён');
+      setPlanMessage(text.planUpdated);
     } finally {
       setPlanLoading(false);
     }
@@ -153,10 +296,10 @@ export function SettingsForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setTelegramError(typeof data?.error === 'string' ? data.error : 'Не удалось сохранить');
+        setTelegramError(typeof data?.error === 'string' ? data.error : text.errSave);
         return;
       }
-      setTelegramMessage('Telegram привязан');
+      setTelegramMessage(text.telegramSaved);
     } finally {
       setTelegramLoading(false);
     }
@@ -174,10 +317,10 @@ export function SettingsForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setOpenaiError(typeof data?.error === 'string' ? data.error : 'Не удалось сохранить');
+        setOpenaiError(typeof data?.error === 'string' ? data.error : text.errSave);
         return;
       }
-      setOpenaiMessage('API key сохранён');
+      setOpenaiMessage(text.openaiSaved);
       setOpenaiHasKey(true);
       // очищаем поле после сохранения (ключ не отображаем)
       setOpenaiKey('');
@@ -190,7 +333,7 @@ export function SettingsForm({
     setEmailChangeError(null);
     setEmailChangeMessage(null);
     if (!emailChangeNew.trim()) {
-      setEmailChangeError('Введите новый email');
+      setEmailChangeError(text.errEnterNewEmail);
       return;
     }
     setEmailChangeLoading(true);
@@ -205,13 +348,11 @@ export function SettingsForm({
         setEmailChangeError(
           typeof data?.error === 'string'
             ? data.error
-            : 'Не удалось отправить код подтверждения'
+            : text.errEmailChange
         );
         return;
       }
-      setEmailChangeMessage(
-        'Код подтверждения отправлен на новый email. Введите его ниже, чтобы завершить смену.'
-      );
+      setEmailChangeMessage(text.codeSent);
     } finally {
       setEmailChangeLoading(false);
     }
@@ -221,7 +362,7 @@ export function SettingsForm({
     setEmailChangeError(null);
     setEmailChangeMessage(null);
     if (!emailChangeNew.trim() || !emailChangeCode.trim()) {
-      setEmailChangeError('Введите новый email и код подтверждения');
+      setEmailChangeError(text.errEnterEmailAndCode);
       return;
     }
     setEmailChangeLoading(true);
@@ -239,13 +380,13 @@ export function SettingsForm({
         setEmailChangeError(
           typeof data?.error === 'string'
             ? data.error
-            : 'Не удалось подтвердить смену email'
+            : text.errConfirmEmail
         );
         return;
       }
       setEmailChangeMessage(
         (data?.message as string) ||
-          'Email изменён. Войдите заново, используя новый адрес.'
+          text.emailChanged
       );
     } finally {
       setEmailChangeLoading(false);
@@ -256,20 +397,20 @@ export function SettingsForm({
     <div className="space-y-6 max-w-xl">
       <Card>
         <CardHeader>
-          <h2 className="text-lg font-semibold">OpenAI (ChatGPT)</h2>
+          <h2 className="text-lg font-semibold">{text.openaiTitle}</h2>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Для работы агента вам нужно указать свой <strong>OpenAI API key</strong>. Ключ хранится в вашем аккаунте.
+            {text.openaiDesc}
           </p>
           {openaiHasKey === true && (
             <p className="text-xs text-emerald-600 dark:text-emerald-400">
-              Ключ уже сохранён. Если хотите заменить — вставьте новый и нажмите «Сохранить».
+              {text.openaiKeySaved}
             </p>
           )}
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              OpenAI API key
+              {text.openaiLabel}
             </label>
             <div className="flex gap-2">
               <Input
@@ -287,7 +428,7 @@ export function SettingsForm({
                 disabled={openaiLoading || openaiKey.trim().length < 10}
                 onClick={handleSaveOpenAiKey}
               >
-                Сохранить
+                {text.save}
               </Button>
             </div>
             {openaiMessage && <p className="mt-1 text-sm text-emerald-600 dark:text-emerald-400">{openaiMessage}</p>}
@@ -298,19 +439,19 @@ export function SettingsForm({
 
       <Card>
         <CardHeader>
-          <h2 className="text-lg font-semibold">Профиль</h2>
+          <h2 className="text-lg font-semibold">{text.profile}</h2>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Имя
+              {text.name}
             </label>
             <div className="flex gap-2">
               <Input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Ваше имя"
+                placeholder={text.namePlaceholder}
                 disabled={profileLoading}
                 className="max-w-xs"
               />
@@ -320,7 +461,7 @@ export function SettingsForm({
                 disabled={profileLoading || !name.trim()}
                 onClick={handleSaveProfile}
               >
-                Сохранить
+                {text.save}
               </Button>
             </div>
             {profileMessage && <p className="mt-1 text-sm text-emerald-600 dark:text-emerald-400">{profileMessage}</p>}
@@ -328,18 +469,18 @@ export function SettingsForm({
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Email
+              {text.email}
             </label>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">{email}</p>
             <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-500">
-              Текущий email. Ниже вы можете запросить смену адреса по коду подтверждения.
+              {text.emailHint}
             </p>
             <div className="mt-3 space-y-2">
               <Input
                 type="email"
                 value={emailChangeNew}
                 onChange={(e) => setEmailChangeNew(e.target.value)}
-                placeholder="Новый email"
+                placeholder={text.newEmailPlaceholder}
                 disabled={emailChangeLoading}
                 className="max-w-xs"
               />
@@ -350,13 +491,13 @@ export function SettingsForm({
                   disabled={emailChangeLoading || !emailChangeNew.trim()}
                   onClick={handleRequestEmailChange}
                 >
-                  Отправить код
+                  {text.sendCode}
                 </Button>
                 <Input
                   type="text"
                   value={emailChangeCode}
                   onChange={(e) => setEmailChangeCode(e.target.value)}
-                  placeholder="Код из письма"
+                  placeholder={text.codePlaceholder}
                   disabled={emailChangeLoading}
                   className="max-w-[140px]"
                 />
@@ -370,7 +511,7 @@ export function SettingsForm({
                   }
                   onClick={handleConfirmEmailChange}
                 >
-                  Подтвердить email
+                  {text.confirmEmail}
                 </Button>
               </div>
               {emailChangeMessage && (
@@ -390,12 +531,12 @@ export function SettingsForm({
 
       <Card>
         <CardHeader>
-          <h2 className="text-lg font-semibold">Пароль</h2>
+          <h2 className="text-lg font-semibold">{text.password}</h2>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Текущий пароль
+              {text.currentPassword}
             </label>
             <Input
               type="password"
@@ -409,13 +550,13 @@ export function SettingsForm({
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Новый пароль
+              {text.newPassword}
             </label>
             <Input
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="не менее 6 символов"
+              placeholder={text.newPasswordPlaceholder}
               disabled={passwordLoading}
               className="max-w-xs"
               autoComplete="new-password"
@@ -423,7 +564,7 @@ export function SettingsForm({
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Подтвердите новый пароль
+              {text.confirmNewPassword}
             </label>
             <Input
               type="password"
@@ -441,7 +582,7 @@ export function SettingsForm({
             disabled={passwordLoading || !currentPassword || !newPassword || !confirmPassword}
             onClick={handleChangePassword}
           >
-            Сменить пароль
+            {text.changePassword}
           </Button>
           {passwordMessage && <p className="mt-1 text-sm text-emerald-600 dark:text-emerald-400">{passwordMessage}</p>}
           {passwordError && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{passwordError}</p>}
@@ -450,23 +591,22 @@ export function SettingsForm({
 
       <Card>
         <CardHeader>
-          <h2 className="text-lg font-semibold">Telegram</h2>
+          <h2 className="text-lg font-semibold">{text.telegram}</h2>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Чтобы бот отправлял вам сообщения и отвечал на команды, привяжите ваш Telegram chat id.
-            Напишите боту <strong>/start</strong> — он покажет ваш <strong>chat id</strong>.
+            {text.telegramDesc}
           </p>
           <div>
             <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Telegram chat id
+              {text.telegramLabel}
             </label>
             <div className="flex gap-2">
               <Input
                 type="text"
                 value={telegramId}
                 onChange={(e) => setTelegramId(e.target.value)}
-                placeholder="например: 123456789"
+                placeholder={text.telegramPlaceholder}
                 disabled={telegramLoading}
                 className="max-w-xs"
               />
@@ -476,7 +616,7 @@ export function SettingsForm({
                 disabled={telegramLoading || !telegramId.trim()}
                 onClick={handleSaveTelegram}
               >
-                Сохранить
+                {text.save}
               </Button>
             </div>
             {telegramMessage && <p className="mt-1 text-sm text-emerald-600 dark:text-emerald-400">{telegramMessage}</p>}
@@ -487,7 +627,7 @@ export function SettingsForm({
 
       <Card>
         <CardHeader>
-          <h2 className="text-lg font-semibold">Тарифный план</h2>
+          <h2 className="text-lg font-semibold">{text.plan}</h2>
         </CardHeader>
         <CardContent className="space-y-4">
           {canChangePlan ? (
@@ -501,7 +641,7 @@ export function SettingsForm({
                 >
                   {PRICING_PLANS.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} — ${p.price}/мес
+                      {p.name} — ${p.price}{text.planPerMonth}
                     </option>
                   ))}
                 </select>
@@ -511,7 +651,7 @@ export function SettingsForm({
                   disabled={planLoading}
                   onClick={handleSavePlan}
                 >
-                  Сохранить тариф
+                  {text.savePlan}
                 </Button>
               </div>
               {planMessage && <p className="text-sm text-emerald-600 dark:text-emerald-400">{planMessage}</p>}
@@ -519,8 +659,7 @@ export function SettingsForm({
             </>
           ) : (
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Текущий тариф: <strong>{PRICING_PLANS.find((p) => p.id === plan)?.name ?? plan}</strong>.
-              Смена тарифа доступна только для аккаунтов с входом по email/паролю.
+              {text.planLocked.split(':')[0]}: <strong>{PRICING_PLANS.find((p) => p.id === plan)?.name ?? plan}</strong>. {text.planLocked.split(':').slice(1).join(':').trim()}
             </p>
           )}
         </CardContent>

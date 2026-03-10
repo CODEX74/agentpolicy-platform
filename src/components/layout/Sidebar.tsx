@@ -3,19 +3,32 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils/cn';
-import { LayoutDashboard, Bot, Wallet, FileText, BarChart3, Settings, CreditCard } from 'lucide-react';
+import { LayoutDashboard, Bot, Wallet, BarChart3, Settings, CreditCard } from 'lucide-react';
+import { useLang, withLang } from '@/contexts/LanguageContext';
 
-const items = [
-  { href: '/dashboard', label: 'Дашборд', icon: LayoutDashboard },
-  { href: '/dashboard/agents', label: 'Агенты', icon: Bot },
-  { href: '/dashboard/transactions', label: 'Транзакции', icon: Wallet },
-  { href: '/dashboard/analytics', label: 'Аналитика', icon: BarChart3 },
-  { href: '/dashboard/settings', label: 'Настройки', icon: Settings },
-  { href: '/dashboard/settings/billing', label: 'Оплата', icon: CreditCard },
-];
+const itemsByLang = {
+  ru: [
+    { href: '/dashboard', label: 'Дашборд', icon: LayoutDashboard },
+    { href: '/dashboard/agents', label: 'Агенты', icon: Bot },
+    { href: '/dashboard/transactions', label: 'Транзакции', icon: Wallet },
+    { href: '/dashboard/analytics', label: 'Аналитика', icon: BarChart3 },
+    { href: '/dashboard/settings', label: 'Настройки', icon: Settings },
+    { href: '/dashboard/settings/billing', label: 'Оплата', icon: CreditCard },
+  ],
+  en: [
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/dashboard/agents', label: 'Agents', icon: Bot },
+    { href: '/dashboard/transactions', label: 'Transactions', icon: Wallet },
+    { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
+    { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+    { href: '/dashboard/settings/billing', label: 'Billing', icon: CreditCard },
+  ],
+};
 
 export function Sidebar() {
   const pathname = usePathname();
+  const lang = useLang();
+  const items = itemsByLang[lang];
 
   return (
     <aside className="flex w-64 flex-col border-r border-zinc-200 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/60">
@@ -31,7 +44,7 @@ export function Sidebar() {
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={withLang(item.href, lang)}
               className={cn(
                 'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
                 isActive

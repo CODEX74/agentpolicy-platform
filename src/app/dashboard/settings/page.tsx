@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { SettingsForm } from '@/components/dashboard/SettingsForm';
+import { SettingsPageContent } from './SettingsPageContent';
 import { prisma } from '@/lib/db/prisma';
 
 export default async function SettingsPage() {
@@ -18,16 +18,13 @@ export default async function SettingsPage() {
 
   return (
     <DashboardLayout>
-      <h1 className="text-2xl font-bold">Настройки</h1>
-      <div className="mt-6">
-        <SettingsForm
-          email={email}
-          initialName={name}
-          initialPlan={plan}
-          canChangePlan={canChangePlan}
-          initialTelegramId={telegramId ?? ''}
-        />
-      </div>
+      <SettingsPageContent
+        email={email}
+        initialName={name}
+        initialPlan={plan}
+        canChangePlan={canChangePlan}
+        initialTelegramId={telegramId ?? ''}
+      />
     </DashboardLayout>
   );
 }

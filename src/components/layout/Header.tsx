@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { buttonVariants } from '@/lib/utils/button-variants';
 import { cn } from '@/lib/utils/cn';
+import { withLang } from '@/contexts/LanguageContext';
 
 const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'AgentPolicy';
 
@@ -39,7 +40,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-200 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/80">
       <div className="container flex h-14 items-center justify-between">
-        <Link href="/" className="font-semibold text-zinc-900 dark:text-zinc-50">
+        <Link href={lang === 'en' ? '/?lang=en' : '/'} className="font-semibold text-zinc-900 dark:text-zinc-50">
           {appName}
         </Link>
         <nav className="flex items-center gap-3 sm:gap-4">
@@ -65,16 +66,10 @@ export function Header() {
               EN
             </button>
           </div>
-          <Link
-            href={{ pathname: '/how-it-works', query: lang === 'en' ? { lang: 'en' } : {} }}
-            className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
-          >
+          <Link href={withLang('/how-it-works', lang)} className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50">
             {t.howItWorks}
           </Link>
-          <Link
-            href={{ pathname: '/pricing', query: lang === 'en' ? { lang: 'en' } : {} }}
-            className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
-          >
+          <Link href={withLang('/pricing', lang)} className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50">
             {t.pricing}
           </Link>
           {status === 'loading' ? (
@@ -86,10 +81,7 @@ export function Header() {
                   Enterprise
                 </span>
               )}
-              <Link
-                href="/dashboard"
-                className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'cursor-pointer')}
-              >
+              <Link href={withLang('/dashboard', lang)} className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'cursor-pointer')}>
                 {t.dashboard}
               </Link>
               <button
@@ -101,12 +93,9 @@ export function Header() {
               </button>
             </>
           ) : (
-            <a
-              href="/login"
-              className={cn(buttonVariants({ size: 'sm' }), 'cursor-pointer no-underline')}
-            >
+            <Link href={withLang('/login', lang)} className={cn(buttonVariants({ size: 'sm' }), 'cursor-pointer no-underline')}>
               {t.login}
-            </a>
+            </Link>
           )}
         </nav>
       </div>

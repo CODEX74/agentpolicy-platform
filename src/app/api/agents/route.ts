@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db/prisma';
+import { getOpenAiKeyByEmail } from '@/lib/db/user-openai';
 import { PRICING_PLANS } from '@/lib/constants/pricing';
 import { z } from 'zod';
 
@@ -62,6 +63,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const email = session.user.email;
+    const openaiKey = await getOpenAiKeyByEmail(email);
+    if (!openaiKey) {
+      return NextResponse.json(
+        { error: 'Укажите OpenAI (ChatGPT) API key в Настройках, чтобы создавать агентов.' },
+        { status: 403 }
+      );
+    }
+
     const planId = (session.user as { plan?: string }).plan;
     const limit = getAgentsLimit(planId);
     const body = await req.json();

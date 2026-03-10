@@ -12,6 +12,15 @@ function formatDateShort(iso: string) {
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
 }
 
+function formatBalance(value: number) {
+  const num = Number.isFinite(value) ? value : 0;
+  const hasFraction = Math.abs(num % 1) > 0;
+  return num.toLocaleString('ru-RU', {
+    minimumFractionDigits: hasFraction ? 2 : 0,
+    maximumFractionDigits: hasFraction ? 2 : 0,
+  });
+}
+
 export function BalanceChart({ data }: { data: DataPoint[] }) {
   if (!data?.length) {
     return (
@@ -37,11 +46,13 @@ export function BalanceChart({ data }: { data: DataPoint[] }) {
           <YAxis
             className="text-xs"
             domain={[0, maxBalance]}
-            tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v))}
+            tickFormatter={(v) =>
+              v >= 1000 ? `${(v / 1000).toFixed(1)}k` : formatBalance(Number(v))
+            }
           />
           <Tooltip
             // тип any здесь допустим: форматируем только числовое значение для тултипа
-            formatter={(value: any) => [`${Number(value ?? 0).toFixed(2)} USDT`, 'Объём']}
+            formatter={(value: any) => [`${formatBalance(Number(value ?? 0))} USDT`, 'Объём']}
             labelFormatter={(label) => formatDateShort(String(label))}
           />
           <Area

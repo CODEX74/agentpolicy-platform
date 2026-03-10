@@ -8,13 +8,15 @@ const updateAgentSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(1000).optional(),
   isActive: z.boolean().optional(),
+  agentType: z.enum(['INVESTOR', 'TRADER']).optional(),
 });
 
-function toAgentResponse(a: { id: string; name: string; description: string | null; isActive: boolean; walletId: string | null; walletAddress: string | null; demoBalance: number | null; run24_7: boolean }) {
+function toAgentResponse(a: { id: string; name: string; description: string | null; agentType: 'INVESTOR' | 'TRADER'; isActive: boolean; walletId: string | null; walletAddress: string | null; demoBalance: number | null; run24_7: boolean }) {
   return {
     _id: a.id,
     name: a.name,
     description: a.description ?? '',
+    agentType: a.agentType,
     isActive: a.isActive,
     walletId: a.walletId ?? undefined,
     walletAddress: a.walletAddress ?? undefined,
@@ -76,6 +78,7 @@ export async function PATCH(
         ...(data.name != null && { name: data.name }),
         ...(data.description != null && { description: data.description }),
         ...(data.isActive != null && { isActive: data.isActive }),
+        ...(data.agentType != null && { agentType: data.agentType }),
       },
     });
     return NextResponse.json(toAgentResponse(updated));

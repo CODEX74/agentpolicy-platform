@@ -9,14 +9,16 @@ const createAgentSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(1000).optional(),
   moltbookId: z.string().optional(),
+  agentType: z.enum(['INVESTOR', 'TRADER']).optional(),
 });
 
-function toAgentResponse(a: { id: string; userId: string; name: string; description: string | null; isActive: boolean; walletId: string | null; walletAddress: string | null; demoBalance: number | null; initialDemoBalance: number | null; run24_7: boolean; createdAt: Date; updatedAt: Date }) {
+function toAgentResponse(a: { id: string; userId: string; name: string; description: string | null; agentType: 'INVESTOR' | 'TRADER'; isActive: boolean; walletId: string | null; walletAddress: string | null; demoBalance: number | null; initialDemoBalance: number | null; run24_7: boolean; createdAt: Date; updatedAt: Date }) {
   return {
     _id: a.id,
     userEmail: '', // not needed for list
     name: a.name,
     description: a.description ?? '',
+    agentType: a.agentType,
     isActive: a.isActive,
     walletId: a.walletId ?? undefined,
     walletAddress: a.walletAddress ?? undefined,
@@ -83,6 +85,7 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         name: data.name,
         description: data.description ?? '',
+        agentType: data.agentType ?? 'INVESTOR',
       },
     });
     return NextResponse.json(toAgentResponse(agent));

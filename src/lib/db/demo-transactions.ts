@@ -29,6 +29,7 @@ export async function getDemoTransactionsByAgent(
     asset: t.asset ?? undefined,
     priceReason: t.priceReason ?? undefined,
     termDays: t.termDays ?? undefined,
+    termMinutes: t.termMinutes ?? undefined,
     plans: t.plans ?? undefined,
     assetPriceUsd: t.assetPriceUsd ?? undefined,
     createdAt: t.createdAt.toISOString(),
@@ -54,6 +55,7 @@ export async function getDemoTransactionsByEmail(userEmail: string) {
     asset: t.asset ?? undefined,
     priceReason: t.priceReason ?? undefined,
     termDays: t.termDays ?? undefined,
+    termMinutes: t.termMinutes ?? undefined,
     plans: t.plans ?? undefined,
     assetPriceUsd: t.assetPriceUsd ?? undefined,
     createdAt: t.createdAt.toISOString(),
@@ -80,6 +82,7 @@ export async function addDemoTransaction(params: {
   asset?: string;
   priceReason?: string;
   termDays?: number;
+  termMinutes?: number;
   plans?: string;
   assetPriceUsd?: number;
 }) {
@@ -97,6 +100,7 @@ export async function addDemoTransaction(params: {
       asset: params.asset,
       priceReason: params.priceReason,
       termDays: params.termDays,
+      termMinutes: params.termMinutes,
       plans: params.plans,
       assetPriceUsd: params.assetPriceUsd,
     },
@@ -112,6 +116,7 @@ export async function addDemoTransaction(params: {
     asset: tx.asset ?? undefined,
     priceReason: tx.priceReason ?? undefined,
     termDays: tx.termDays ?? undefined,
+    termMinutes: tx.termMinutes ?? undefined,
     plans: tx.plans ?? undefined,
     assetPriceUsd: tx.assetPriceUsd ?? undefined,
     createdAt: tx.createdAt.toISOString(),
@@ -130,7 +135,8 @@ export async function getDemoSpentThisWeek(agentId: string, userEmail: string): 
       agentId,
       userId: user.id,
       createdAt: { gte: weekAgo },
-      type: { not: 'hold' },
+      // В лимиты "потрачено" считаем только покупки/переводы (sell не должен уменьшать лимит).
+      type: { in: ['buy_eth', 'transfer'] },
     },
   });
   return rows.reduce((sum, t) => sum + t.amountEth, 0);
@@ -148,7 +154,7 @@ export async function getDemoSpentToday(agentId: string, userEmail: string): Pro
       agentId,
       userId: user.id,
       createdAt: { gte: today },
-      type: { not: 'hold' },
+      type: { in: ['buy_eth', 'transfer'] },
     },
   });
   return rows.reduce((sum, t) => sum + t.amountEth, 0);
@@ -181,23 +187,43 @@ export async function getDemoPositions(
   userEmail: string
 ): Promise<DemoPosition[]> {
   const rows = await getDemoTransactionsByAgent(agentId, userEmail);
-  const buys = rows.filter((t) => t.type === 'buy_eth' && t.amountEth > 0 && t.asset);
   const byAsset = new Map<string, { totalUsd: number; quantity: number }>();
-  for (const t of buys) {
-    const asset = t.asset ?? 'USDT';
+  // Обрабатываем по времени (asc), чтобы корректно уменьшать позицию при sell.
+  const ordered = [...rows].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  for (const t of ordered) {
+    const asset = (t.asset ?? '').toUpperCase().trim();
+    if (!asset) continue;
     const price = t.assetPriceUsd && t.assetPriceUsd > 0 ? t.assetPriceUsd : null;
     if (price == null) continue;
-    const quantity = t.amountEth / price;
+
     const cur = byAsset.get(asset) ?? { totalUsd: 0, quantity: 0 };
-    byAsset.set(asset, {
-      totalUsd: cur.totalUsd + t.amountEth,
-      quantity: cur.quantity + quantity,
-    });
+
+    if (t.type === 'buy_eth' && t.amountEth > 0) {
+      const qty = t.amountEth / price;
+      byAsset.set(asset, { totalUsd: cur.totalUsd + t.amountEth, quantity: cur.quantity + qty });
+      continue;
+    }
+
+    if (t.type === 'sell_eth' && t.amountEth > 0) {
+      // amountEth для sell — это полученные USDT (выручка)
+      const sellQty = t.amountEth / price;
+      if (cur.quantity <= 0) continue;
+      const actualQty = Math.min(cur.quantity, sellQty);
+      const avgCost = cur.totalUsd > 0 && cur.quantity > 0 ? cur.totalUsd / cur.quantity : 0;
+      const costReduction = avgCost * actualQty;
+      const newQty = Math.max(0, cur.quantity - actualQty);
+      const newTotalUsd = Math.max(0, cur.totalUsd - costReduction);
+      byAsset.set(asset, { totalUsd: newTotalUsd, quantity: newQty });
+      continue;
+    }
   }
-  return Array.from(byAsset.entries()).map(([asset, { totalUsd, quantity }]) => ({
-    asset,
-    quantity,
-    totalUsdSpent: totalUsd,
-    avgPriceUsd: quantity > 0 ? totalUsd / quantity : 0,
-  }));
+
+  return Array.from(byAsset.entries())
+    .filter(([, v]) => v.quantity > 0)
+    .map(([asset, { totalUsd, quantity }]) => ({
+      asset,
+      quantity,
+      totalUsdSpent: totalUsd,
+      avgPriceUsd: quantity > 0 ? totalUsd / quantity : 0,
+    }));
 }

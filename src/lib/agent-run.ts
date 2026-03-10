@@ -3,6 +3,7 @@ import {
   getDemoSpentToday,
   getDemoSpentThisWeek,
   addDemoTransaction,
+  getDemoPositions,
 } from '@/lib/db/demo-transactions';
 import {
   getUsdtPriceUsd,
@@ -29,6 +30,7 @@ export interface RunAgentResult {
   asset?: string;
   priceReason?: string;
   termDays?: number;
+  termMinutes?: number;
   plans?: string;
   /** Цена купленного актива в USD на момент решения */
   assetPriceUsd?: number;
@@ -98,6 +100,7 @@ export async function runAgentOnce(
 
   const result = await getAgentTradeDecision({
     agentName: agent.name,
+    agentType: agent.agentType,
     demoBalanceEth: balance,
     policy: {
       dailyLimit: policy.dailyLimit,
@@ -132,6 +135,7 @@ export async function runAgentOnce(
     asset: decision.asset,
     priceReason: decision.priceReason,
     termDays: decision.termDays,
+    termMinutes: decision.termMinutes,
     plans: decision.plans,
     assetPriceUsd: decision.asset ? marketPrices[decision.asset] : undefined,
   };
@@ -227,22 +231,80 @@ export async function runAgentOnce(
       asset: decision.asset,
       priceReason: decision.priceReason,
       termDays: decision.termDays,
+      termMinutes: decision.termMinutes,
       plans: decision.plans,
       assetPriceUsd: decision.asset ? marketPrices[decision.asset] : undefined,
     };
   }
 
   if (decision.action === 'sell_eth') {
+    const asset = (decision.asset ?? '').toUpperCase().trim();
+    const priceUsd = asset ? marketPrices[asset] : undefined;
+    if (!asset || !priceUsd || priceUsd <= 0) {
+      await addDemoTransaction({
+        agentId,
+        userEmail,
+        type: 'hold',
+        amountEth: 0,
+        reason: `Продажа отменена: не указан актив или неизвестна цена. ${decision.reason}`,
+        marketPriceUsd: usdtPrice || undefined,
+        ...demoExtra,
+      });
+      return { ok: true, action: 'hold', reason: decision.reason, demoBalance: balance };
+    }
+
+    const positions = await getDemoPositions(agentId, userEmail);
+    const pos = positions.find((p) => p.asset.toUpperCase() === asset);
+    if (!pos || pos.quantity <= 0) {
+      await addDemoTransaction({
+        agentId,
+        userEmail,
+        type: 'hold',
+        amountEth: 0,
+        reason: `Продажа отменена: нет позиции ${asset}. ${decision.reason}`,
+        marketPriceUsd: usdtPrice || undefined,
+        ...demoExtra,
+      });
+      return { ok: true, action: 'hold', reason: decision.reason, demoBalance: balance };
+    }
+
+    // Продаём всю текущую позицию по текущей цене (демо).
+    const proceedsUsdt = pos.quantity * priceUsd;
+    const newBalance = balance + proceedsUsdt;
+
+    await prisma.agent.update({
+      where: { id: agentId },
+      data: { demoBalance: newBalance },
+    });
+
     await addDemoTransaction({
       agentId,
       userEmail,
-      type: 'hold',
-      amountEth: 0,
-      reason: `Продажа в демо не реализована. ${decision.reason}`,
+      type: 'sell_eth',
+      amountEth: proceedsUsdt,
+      reason: decision.reason,
       marketPriceUsd: usdtPrice || undefined,
-      ...demoExtra,
+      asset,
+      priceReason: decision.priceReason,
+      termDays: decision.termDays,
+      plans: decision.plans,
+      termMinutes: decision.termMinutes,
+      assetPriceUsd: priceUsd,
     });
-    return { ok: true, action: 'hold', reason: decision.reason, demoBalance: balance };
+
+    return {
+      ok: true,
+      action: 'sell_eth',
+      reason: decision.reason,
+      demoBalance: newBalance,
+      amountEth: proceedsUsdt,
+      asset,
+      priceReason: decision.priceReason,
+      termDays: decision.termDays,
+      termMinutes: decision.termMinutes,
+      plans: decision.plans,
+      assetPriceUsd: priceUsd,
+    };
   }
 
   return { ok: true, action: 'hold', reason: decision.reason, demoBalance: balance };

@@ -23,6 +23,8 @@ const decisionSchema = z.object({
   priceReason: z.string().max(500).optional(),
   /** На сколько дней планируется держать позицию (при покупке) */
   termDays: z.number().min(0).max(365).optional(),
+  /** Для трейдера: через сколько минут планируется закрыть сделку (5–30). */
+  termMinutes: z.number().min(0).max(24 * 60).optional(),
   /** Планы по позиции (например: перепродажа через месяц, держать до целевой цены) */
   plans: z.string().max(500).optional(),
 });
@@ -34,6 +36,7 @@ export type MarketPrices = Record<string, number>;
 
 export interface AgentTraderInput {
   agentName: string;
+  agentType: 'INVESTOR' | 'TRADER';
   demoBalanceEth: number;
   policy: {
     dailyLimit: number;
@@ -132,6 +135,16 @@ const AGENT_PROMPT = (input: AgentTraderInput) => {
     .map(([ticker, usd]) => `${ticker}=$${usd}`)
     .join(', ');
   const opsRu = (input.policy.allowedOperations || []).map((o) => ({ buy: 'Покупка', sell: 'Продажа', swap: 'Обмен', hold: 'Удержание' }[o] ?? o)).join(', ') || 'Покупка, Удержание';
+  const styleBlock =
+    input.agentType === 'INVESTOR'
+      ? `Стиль: ИНВЕСТОР (долгосрок).
+- Покупки только с горизонтом удержания минимум 10 дней.
+- При buy_eth обязательно ставь termDays >= 10 и в plans опиши сценарий выхода (например, по цели/по времени).
+- Не делай коротких "скальп" сделок и не указывай termMinutes.`
+      : `Стиль: ТРЕЙДЕР (интрадей).
+- Ищешь быстрые сделки: горизонт 5–30 минут.
+- При buy_eth обязательно укажи termMinutes в диапазоне 5–30, а termDays не указывай.
+- Ты можешь делать sell_eth, когда есть позиция по asset и есть причина закрыть сделку (достижение цели/стоп/слабость тренда).`;
   return `Ты — автономный торговый агент, работающий 24/7. Ты можешь покупать криптовалюту за USDT (ETH, BTC, SOL, BNB, AVAX и т.д.). Решения только при возможности прибыли; в сомнениях — hold.
 
 Правила:
@@ -139,7 +152,10 @@ const AGENT_PROMPT = (input: AgentTraderInput) => {
 - Действуй (buy_eth, sell_eth, transfer) только при ясной выгоде. При покупке обязательно укажи: какой актив (asset), обоснование (reason), почему этот актив и по какой цене (priceReason), на сколько дней держишь (termDays).
 - Без явной выгоды оставляй hold.
 
+${styleBlock}
+
 Агент: ${input.agentName}
+Тип агента: ${input.agentType}
 Демо-баланс: ${input.demoBalanceEth} USDT
 Политика: дневной лимит ${input.policy.dailyLimit} USDT, недельный ${input.policy.weeklyLimit} USDT, макс. за транзакцию ${input.policy.maxPerTransaction} USDT. Разрешённые операции: ${opsRu}.
 Уже потрачено сегодня: ${input.spentTodayEth} USDT, за неделю: ${input.spentWeekEth} USDT.
@@ -147,13 +163,16 @@ const AGENT_PROMPT = (input: AgentTraderInput) => {
 Рынок (цены в USD): ${pricesLine}. Тренд: ${input.marketTrend}.
 
 Действия: buy_eth (купить криптоактив за USDT — только ETH, BTC, SOL и т.д., не USDT), sell_eth (продать), transfer (перевод), hold (ничего не делать).
-При buy_eth обязательно укажи: amountEth, asset (тикер крипты: ETH, BTC, SOL… не USDT), reason, priceReason, termDays, plans.
+При buy_eth обязательно укажи: amountEth, asset (тикер крипты: ETH, BTC, SOL… не USDT), reason, priceReason, plans, и горизонт (ИНВЕСТОР: termDays>=10; ТРЕЙДЕР: termMinutes 5–30).
+При sell_eth обязательно укажи: asset, reason, priceReason, plans (почему закрываешь позицию и что дальше).
 При hold всегда пиши развёрнутое обоснование (reason): почему не покупаешь, что ждёшь, какие уровни или условия важны.
 
 Ответь только одним JSON-объектом, без markdown. Примеры:
 {"action":"hold","reason":"Ожидаю коррекции к поддержке $95k по BTC; текущая перекупленность, не добавляю в лонг до отката."}
 {"action":"buy_eth","amountEth":20,"asset":"BTC","reason":"Диверсификация на коррекции","priceReason":"Цена откатила от ATH, покупаю на поддержке","termDays":30,"plans":"Перепродажа через месяц при росте на 5-10%"}
 {"action":"buy_eth","amountEth":10,"asset":"ETH","reason":"Рост по тренду","priceReason":"Сильная поддержка на текущих уровнях","termDays":14,"plans":"Держать до целевой $4000 или перепродажа через 2 недели"}
+{"action":"buy_eth","amountEth":20,"asset":"SOL","reason":"Импульс и пробой уровня","priceReason":"Пробой локального сопротивления на объёме","termMinutes":15,"plans":"Фиксация по +0.8% или выход по стопу при откате"}
+{"action":"sell_eth","asset":"SOL","reason":"Цель достигнута, фиксирую прибыль","priceReason":"Цена подошла к локальному сопротивлению","termMinutes":10,"plans":"Перевожу в USDT и жду ретест"}
 Допустимые action: buy_eth, sell_eth, transfer, hold.`;
 };
 

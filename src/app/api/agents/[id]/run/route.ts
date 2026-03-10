@@ -45,6 +45,12 @@ export async function POST(
       reason: result.reason,
       demoBalance: result.demoBalance,
       ...(result.amountEth != null && { amountEth: result.amountEth }),
+      ...(result.asset != null && { asset: result.asset }),
+      ...(result.assetPriceUsd != null && { assetPriceUsd: result.assetPriceUsd }),
+      ...(result.termDays != null && { termDays: result.termDays }),
+      ...(result.termMinutes != null && { termMinutes: result.termMinutes }),
+      ...(result.priceReason != null && { priceReason: result.priceReason }),
+      ...(result.plans != null && { plans: result.plans }),
     });
   } catch (err) {
     console.error('POST /api/agents/[id]/run', err);

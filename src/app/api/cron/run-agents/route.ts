@@ -93,6 +93,8 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
                   ? '⏸ Держать'
                   : r.result.action === 'buy_eth' && r.result.asset
                     ? `▶ Покупка ${r.result.asset}`
+                    : r.result.action === 'sell_eth' && r.result.asset
+                      ? `▶ Продажа ${r.result.asset}`
                     : `▶ ${r.result.action}`;
               const reason = r.result.reason ?? r.result.error ?? '—';
               const balanceStr = r.result.demoBalance != null ? `${r.result.demoBalance} USDT` : '—';
@@ -115,6 +117,18 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
                 }
                 if (r.result.assetPriceUsd != null) parts.push(`Цена покупки: $${r.result.assetPriceUsd} (${r.result.asset})`);
                 if (r.result.termDays != null) parts.push(`Срок: ${r.result.termDays} дн.`);
+                if (r.result.termMinutes != null) parts.push(`Срок: ${r.result.termMinutes} мин.`);
+                if (r.result.priceReason) parts.push(`Почему эта цена: ${r.result.priceReason}`);
+                if (r.result.plans) parts.push(`Планы: ${r.result.plans}`);
+              }
+              if (r.result.action === 'sell_eth' && r.result.asset) {
+                if (r.result.amountEth != null && r.result.assetPriceUsd != null && r.result.assetPriceUsd > 0) {
+                  const soldQty = r.result.amountEth / r.result.assetPriceUsd;
+                  parts.push(`Продано: ${formatAssetQuantity(soldQty)} ${r.result.asset} (получено ${r.result.amountEth} USDT)`);
+                }
+                if (r.result.assetPriceUsd != null) parts.push(`Цена продажи: $${r.result.assetPriceUsd} (${r.result.asset})`);
+                if (r.result.termDays != null) parts.push(`Срок: ${r.result.termDays} дн.`);
+                if (r.result.termMinutes != null) parts.push(`Срок: ${r.result.termMinutes} мин.`);
                 if (r.result.priceReason) parts.push(`Почему эта цена: ${r.result.priceReason}`);
                 if (r.result.plans) parts.push(`Планы: ${r.result.plans}`);
               }

@@ -65,11 +65,17 @@ model VerificationToken {
 }
 
 // App models
+enum AgentType {
+  INVESTOR
+  TRADER
+}
+
 model Agent {
   id                String   @id @default(cuid())
   userId            String
   name              String
   description       String?
+  agentType         AgentType @default(INVESTOR)
   isActive          Boolean  @default(true)
   walletId          String?
   walletAddress     String?
@@ -132,6 +138,7 @@ model DemoTransaction {
   asset         String?
   priceReason   String?
   termDays      Int?
+  termMinutes   Int?
   plans         String?
   assetPriceUsd Float?
   createdAt     DateTime @default(now())

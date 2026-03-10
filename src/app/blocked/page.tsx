@@ -2,36 +2,64 @@ import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
-export default function BlockedPage() {
+type Lang = 'ru' | 'en';
+
+function getLang(searchParams?: { lang?: string }): Lang {
+  const raw = searchParams?.lang?.toLowerCase();
+  return raw === 'en' ? 'en' : 'ru';
+}
+
+const copy: Record<
+  Lang,
+  {
+    title: string;
+    p1: string;
+    p2: string;
+    hint: string;
+    button: string;
+    footer: string;
+  }
+> = {
+  ru: {
+    title: 'Доступ к платформе ограничен',
+    p1: 'Сейчас платформа недоступна для пользователей из России и Беларуси.',
+    p2: 'Чтобы продолжить пользоваться сайтом, установите VPN и выберите любую другую страну (например, Польшу, Германию, Нидерланды и т.д.), затем обновите страницу.',
+    hint: 'Рекомендуем установить VPN-расширение для браузера Chrome:',
+    button: 'Открыть каталог VPN-расширений',
+    footer: 'После установки и включения VPN вернитесь на эту страницу и попробуйте снова.',
+  },
+  en: {
+    title: 'Access to the platform is restricted',
+    p1: 'The platform is currently unavailable for users from Russia and Belarus.',
+    p2: 'To continue using the site, install a VPN and choose any other country (for example Poland, Germany, the Netherlands, etc.), then refresh the page.',
+    hint: 'We recommend installing a VPN extension for the Chrome browser:',
+    button: 'Open VPN extensions catalog',
+    footer: 'After installing and enabling the VPN, return to this page and try again.',
+  },
+};
+
+export default function BlockedPage({ searchParams }: { searchParams?: { lang?: string } }) {
+  const lang = getLang(searchParams);
+  const t = copy[lang] ?? copy.ru;
+
   return (
-    <main className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-50 px-4">
-      <div className="max-w-xl w-full space-y-6 text-center">
-        <h1 className="text-3xl md:text-4xl font-semibold">
-          Доступ к платформе ограничен
-        </h1>
-        <p className="text-slate-300">
-          Сейчас платформа недоступна для пользователей из России и Беларуси.
-        </p>
-        <p className="text-slate-300">
-          Чтобы продолжить пользоваться сайтом, установите VPN и выберите любую другую страну
-          (например, Польшу, Германию, Нидерланды и т.д.), затем обновите страницу.
-        </p>
+    <main className="flex min-h-screen items-center justify-center bg-slate-950 px-4 text-slate-50">
+      <div className="w-full max-w-xl space-y-6 text-center">
+        <h1 className="text-3xl font-semibold md:text-4xl">{t.title}</h1>
+        <p className="text-slate-300">{t.p1}</p>
+        <p className="text-slate-300">{t.p2}</p>
         <div className="space-y-3">
-          <p className="text-sm text-slate-400">
-            Рекомендуем установить VPN-расширение для браузера Chrome:
-          </p>
+          <p className="text-sm text-slate-400">{t.hint}</p>
           <Link
             href="https://chromewebstore.google.com/search/VPN?hl=ru&utm_source=ext_sidebar"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 hover:bg-emerald-400 transition-colors"
+            className="inline-flex items-center justify-center rounded-md bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 transition-colors hover:bg-emerald-400"
           >
-            Открыть каталог VPN-расширений
+            {t.button}
           </Link>
         </div>
-        <p className="text-xs text-slate-500">
-          После установки и включения VPN вернитесь на эту страницу и попробуйте снова.
-        </p>
+        <p className="text-xs text-slate-500">{t.footer}</p>
       </div>
     </main>
   );

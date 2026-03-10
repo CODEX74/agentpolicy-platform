@@ -19,6 +19,22 @@ interface Tx {
   assetPriceUsd?: number;
 }
 
+function formatTxType(type: string): string {
+  const key = type.toLowerCase();
+  switch (key) {
+    case 'hold':
+      return 'Держать';
+    case 'buy_coin':
+      return 'Покупка';
+    case 'sell_coin':
+      return 'Продажа';
+    case 'transfer':
+      return 'Перевод';
+    default:
+      return type;
+  }
+}
+
 export function TransactionTable({ transactions }: { transactions: Tx[] }) {
   if (transactions.length === 0) {
     return (
@@ -44,7 +60,7 @@ export function TransactionTable({ transactions }: { transactions: Tx[] }) {
         <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
           {transactions.map((tx) => (
             <tr key={tx._id}>
-              <td className="px-4 py-3 capitalize">{tx.type}</td>
+              <td className="px-4 py-3">{formatTxType(tx.type)}</td>
               <td className="px-4 py-3">{tx.amount} {tx.currency}</td>
               <td className="px-4 py-3 font-mono text-xs">{tx.toAddress ? formatAddress(tx.toAddress) : '—'}</td>
               <td className="px-4 py-3">{tx.isDemo ? 'Демо' : tx.status}</td>

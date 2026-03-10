@@ -31,6 +31,22 @@ interface AgentDemoCardProps {
   agentId: string;
 }
 
+function formatDemoTxType(type: string): string {
+  const key = type.toLowerCase();
+  switch (key) {
+    case 'hold':
+      return 'Держать';
+    case 'buy_coin':
+      return 'Покупка';
+    case 'sell_coin':
+      return 'Продажа';
+    case 'transfer':
+      return 'Перевод';
+    default:
+      return type;
+  }
+}
+
 export function AgentDemoCard({ agentId }: AgentDemoCardProps) {
   const [demoBalance, setDemoBalance] = useState<number | null>(null);
   const [positions, setPositions] = useState<DemoPosition[]>([]);
@@ -274,7 +290,7 @@ export function AgentDemoCard({ agentId }: AgentDemoCardProps) {
             <ul className="max-h-48 space-y-2 overflow-y-auto text-sm">
               {transactions.slice(0, 20).map((tx) => (
                 <li key={tx._id} className="rounded bg-zinc-100 px-2 py-1 dark:bg-zinc-800">
-                  <span className="font-medium capitalize">{tx.type}</span>
+                  <span className="font-medium">{formatDemoTxType(tx.type)}</span>
                   {tx.amountEth > 0 && ` · ${tx.amountEth} USDT`}
                   {tx.asset && ` · ${tx.asset}`}
                   {tx.marketPriceUsd != null && ` · $${tx.marketPriceUsd}`}

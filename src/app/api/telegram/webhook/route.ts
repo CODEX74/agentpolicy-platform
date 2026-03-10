@@ -216,9 +216,83 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
+    // /profit — результат торгов агентов за сегодня (по демо-транзакциям)
+    const looksLikeProfit = /^\/\s*profit(\s|@|$)/i.test(rawText) || command === '/profit';
+    if (looksLikeProfit) {
+      console.log('[Telegram webhook] handling /profit', { rawText, command });
+      if (!userEmail) {
+        await sendTelegramMessageToChat(
+          `Аккаунт не привязан. Ваш chat id: ${chatIdStr}\nЗайдите на сайт → Настройки → Telegram и вставьте этот chat id.`,
+          chatIdStr
+        );
+        return NextResponse.json({ ok: true });
+      }
+      await sendTelegramMessageToChat('Считаю результат за сегодня…', chatIdStr);
+      try {
+        const user = await prisma.user.findUnique({
+          where: { email: userEmail },
+          include: { agents: true },
+        });
+        const agents = user?.agents ?? [];
+        if (agents.length === 0) {
+          await sendTelegramMessageToChat(
+            '📈 Результат за сегодня\n\nНет агентов с демо-балансом. Создайте агента на сайте.',
+            chatIdStr
+          );
+          return NextResponse.json({ ok: true });
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let totalNet = 0;
+        const lines: string[] = ['📈 Результат торгов за сегодня', ''];
+
+        for (const agent of agents) {
+          const txs = await prisma.demoTransaction.findMany({
+            where: {
+              agentId: agent.id,
+              userId: user!.id,
+              createdAt: { gte: today },
+              type: { in: ['buy_eth', 'sell_eth'] },
+            },
+          });
+          if (!txs.length) {
+            lines.push(`• ${agent.name}`);
+            lines.push('  Сделок сегодня не было.');
+            lines.push('');
+            continue;
+          }
+          const totalBuys = txs
+            .filter((t) => t.type === 'buy_eth')
+            .reduce((sum, t) => sum + t.amountEth, 0);
+          const totalSells = txs
+            .filter((t) => t.type === 'sell_eth')
+            .reduce((sum, t) => sum + t.amountEth, 0);
+          const net = totalSells - totalBuys;
+          totalNet += net;
+
+          lines.push(`• ${agent.name}`);
+          lines.push(`  Куплено за сегодня: ${totalBuys.toFixed(2)} USDT`);
+          lines.push(`  Продано за сегодня: ${totalSells.toFixed(2)} USDT`);
+          lines.push(`  PnL за сегодня: ${net >= 0 ? '+' : ''}${net.toFixed(2)} USDT`);
+          lines.push('');
+        }
+
+        lines.push(`Итого по всем агентам за сегодня: ${totalNet >= 0 ? '+' : ''}${totalNet.toFixed(2)} USDT`);
+        const r = await sendTelegramMessageToChat(lines.join('\n').slice(0, 4096), chatIdStr);
+        if (!r.ok) console.error('[Telegram webhook] /profit message failed:', r.error);
+      } catch (err) {
+        const msgErr = err instanceof Error ? err.message : String(err);
+        console.error('[Telegram webhook] /profit error', err);
+        await sendTelegramMessageToChat(`Ошибка расчёта профита: ${msgErr.slice(0, 300)}`, chatIdStr);
+      }
+      return NextResponse.json({ ok: true });
+    }
+
     if (command === '/start') {
       const base =
-        'Команды:\n/balance — демо-баланс и позиции по агентам\n/daily — оставшийся дневной лимит по агентам\n/resetbalance — очистить демо-транзакции и восстановить балансы';
+        'Команды:\n/balance — демо-баланс и позиции по агентам\n/daily — оставшийся дневной лимит по агентам\n/profit — результат торгов агентов за сегодня\n/resetbalance — очистить демо-транзакции и восстановить балансы';
       const linkInfo = userEmail
         ? `\n\n✅ Аккаунт привязан: ${userEmail}`
         : `\n\n⚠️ Аккаунт не привязан.\nВаш chat id: ${chatIdStr}\nЗайдите на сайт → Настройки → Telegram и вставьте этот chat id.`;

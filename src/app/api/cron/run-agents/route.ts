@@ -87,7 +87,7 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
         ? [
             `🤖 Агенты 24/7 (${new Date().toLocaleString('ru-RU')})`,
             '',
-            ...userResults.map((r) => {
+            ...userResults.flatMap((r, idx) => {
               const a =
                 r.result.action === 'hold'
                   ? '⏸ Держать'
@@ -132,7 +132,8 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
                 if (r.result.priceReason) parts.push(`Почему эта цена: ${r.result.priceReason}`);
                 if (r.result.plans) parts.push(`Планы: ${r.result.plans}`);
               }
-              return parts.join('\n');
+              const block = parts.join('\n');
+              return idx === userResults.length - 1 ? [block] : [block, ''];
             }),
           ]
         : [`🤖 Крон 24/7 (${new Date().toLocaleString('ru-RU')})`, '', 'Нет активных агентов 24/7.'];

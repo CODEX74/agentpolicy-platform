@@ -1,11 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import { BalanceChart } from '@/components/dashboard/BalanceChart';
 import { AgentBalancesChart } from '@/components/dashboard/AgentBalancesChart';
 import { AssetAllocationChart } from '@/components/dashboard/AssetAllocationChart';
 import { PnlByAgentChart } from '@/components/dashboard/PnlByAgentChart';
 import { AgentBuysChart } from '@/components/dashboard/AgentBuysChart';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { Button } from '@/components/ui/Button';
 
 export function AnalyticsClient() {
   const {
@@ -16,6 +18,31 @@ export function AnalyticsClient() {
     buysByAgentOverTime,
     isLoading,
   } = useAnalytics();
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownloadReport = async () => {
+    try {
+      setIsDownloading(true);
+      const res = await fetch('/api/analytics/report');
+      if (!res.ok) {
+        throw new Error('Не удалось сформировать отчёт');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'agent-analytics-report.docx';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      // здесь можно позже добавить toast-уведомление
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <>
@@ -25,7 +52,7 @@ export function AnalyticsClient() {
       </p>
 
       {isLoading ? (
-        <div className="mt-6 flex h-64 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="mt-6 flex h-64 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
           <p className="text-zinc-500">Загрузка...</p>
         </div>
       ) : (
@@ -95,6 +122,17 @@ export function AnalyticsClient() {
               <AgentBuysChart data={buysByAgentOverTime} />
             </div>
           </section>
+
+          <div className="pt-4">
+            <Button
+              type="button"
+              className="w-full sm:w-auto"
+              onClick={handleDownloadReport}
+              disabled={isDownloading}
+            >
+              {isDownloading ? 'Формирование отчёта…' : 'Сформировать отчёт'}
+            </Button>
+          </div>
         </div>
       )}
     </>

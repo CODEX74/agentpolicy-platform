@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    let emailSent = true;
     try {
       await sendEmail({
         to: email,
@@ -59,17 +60,16 @@ export async function POST(req: NextRequest) {
         text: `Ваш код подтверждения: ${code}\n\nКод действует 15 минут. Введите его на странице подтверждения email.`,
       });
     } catch (e) {
+      emailSent = false;
       console.error('Failed to send verification email', e);
-      return NextResponse.json(
-        {
-          error:
-            'Не удалось отправить письмо с кодом подтверждения. Проверьте настройки почты на сервере.',
-        },
-        { status: 500 }
-      );
+      // Не блокируем регистрацию, просто отмечаем, что письмо не ушло
     }
 
-    return NextResponse.json({ ok: true, requiresVerification: true });
+    return NextResponse.json({
+      ok: true,
+      requiresVerification: emailSent,
+      emailSent,
+    });
   } catch (e) {
     if (e instanceof z.ZodError) {
       return NextResponse.json({ error: e.flatten() }, { status: 400 });

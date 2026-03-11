@@ -190,7 +190,7 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
                 <label className="text-xs font-medium uppercase tracking-wide">
                   {text.addressLabel}
                 </label>
-                <Button type="button" size="xs" variant="outline" onClick={handleCopy}>
+                <Button type="button" size="sm" variant="outline" onClick={handleCopy}>
                   {copied ? text.copied : text.copy}
                 </Button>
               </div>

@@ -26,8 +26,30 @@ function getCommand(rawText: string): string {
   return cmd.toLowerCase();
 }
 
+/** Храним язык для каждого чата (в памяти процесса) */
+type Lang = 'ru' | 'en';
+const chatLang = new Map<string, Lang>();
+
+function getChatLang(chatId: string): Lang {
+  const v = chatLang.get(chatId);
+  return v === 'en' ? 'en' : 'ru';
+}
+
 /** Ключи — тикеры (BTC, SOL и т.д.), значения — цена в USD */
 type MarketPrices = Record<string, number>;
+
+const tStart: Record<Lang, { greeting: string; chooseLang: string; langSet: string }> = {
+  ru: {
+    greeting: 'Привет! Я бот AgentWallet. Я показываю демо-баланс и лимиты агентов.',
+    chooseLang: 'Выберите язык интерфейса:',
+    langSet: 'Язык Telegram-бота переключён на русский.',
+  },
+  en: {
+    greeting: 'Hi! I am the AgentWallet bot. I show demo balance and limits for your agents.',
+    chooseLang: 'Choose bot language:',
+    langSet: 'Telegram bot language has been switched to English.',
+  },
+};
 
 function formatBalanceMessage(
   agents: { _id: string; name: string; demoBalance?: number }[],
@@ -123,6 +145,34 @@ export async function POST(req: NextRequest) {
     }
     const chatIdStr = String(chatId);
     const command = getCommand(rawText);
+    const currentLang = getChatLang(chatIdStr);
+
+    // Обработка выбора языка через кнопки RU/EN
+    const upper = rawText.toUpperCase();
+    if (upper === 'RU' || upper === 'EN') {
+      const newLang: Lang = upper === 'EN' ? 'en' : 'ru';
+      chatLang.set(chatIdStr, newLang);
+      const tt = tStart[newLang];
+      await sendTelegramMessageToChat(tt.langSet, chatIdStr);
+      return NextResponse.json({ ok: true });
+    }
+
+    // /start — приветствие и предложение выбрать язык
+    if (command === '/start') {
+      const tt = tStart[currentLang];
+      await sendTelegramMessageToChat(
+        `${tt.greeting}\n\n${tt.chooseLang}`,
+        chatIdStr,
+        {
+          replyMarkup: {
+            keyboard: [[{ text: 'RU' }, { text: 'EN' }]],
+            resize_keyboard: true,
+            one_time_keyboard: false,
+          },
+        }
+      );
+      return NextResponse.json({ ok: true });
+    }
 
     // Определяем пользователя по chat_id (привязка делается в Настройки → Telegram)
     const userEmail = await getEmailByTelegramId(chatIdStr);

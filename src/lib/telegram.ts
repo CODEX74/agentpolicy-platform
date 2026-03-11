@@ -13,7 +13,8 @@ export interface SendTelegramResult {
 /** Отправить сообщение в указанный чат (для ответов в webhook) */
 export async function sendTelegramMessageToChat(
   text: string,
-  chatId: string
+  chatId: string,
+  options?: { replyMarkup?: unknown }
 ): Promise<SendTelegramResult> {
   const token = process.env.TELEGRAM_BOT_TOKEN?.trim();
   if (!token) return { ok: false, error: 'TELEGRAM_BOT_TOKEN не задан' };
@@ -26,6 +27,7 @@ export async function sendTelegramMessageToChat(
         chat_id: String(chatId),
         text: text.slice(0, 4096),
         disable_web_page_preview: true,
+        ...(options?.replyMarkup ? { reply_markup: options.replyMarkup } : {}),
       }),
     });
     const data = (await res.json().catch(() => ({}))) as { ok?: boolean; description?: string };

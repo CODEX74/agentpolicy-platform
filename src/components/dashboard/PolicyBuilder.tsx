@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import type { Resolver, ResolverResult } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -35,6 +35,21 @@ const policySchema = z.object({
 });
 
 type PolicyFormValues = z.infer<typeof policySchema>;
+
+function policyZodResolver(): Resolver<PolicyFormValues> {
+  return async (values): Promise<ResolverResult<PolicyFormValues>> => {
+    const result = policySchema.safeParse(values);
+    if (result.success) {
+      return { values: result.data, errors: {} };
+    }
+    const errors: Record<string, { message: string }> = {};
+    for (const issue of result.error.issues) {
+      const path = issue.path.join('.');
+      if (!errors[path]) errors[path] = { message: issue.message };
+    }
+    return { values: {} as Record<string, never>, errors } as ResolverResult<PolicyFormValues>;
+  };
+}
 
 interface PolicyBuilderProps {
   agentId: string;
@@ -157,7 +172,7 @@ export function PolicyBuilder({ agentId, initialPolicy, onSave }: PolicyBuilderP
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<PolicyFormValues>({
-    resolver: zodResolver(policySchema),
+    resolver: policyZodResolver(),
     defaultValues: { ...defaultValues, ...initialPolicy },
   });
 
@@ -260,8 +275,14 @@ export function PolicyBuilder({ agentId, initialPolicy, onSave }: PolicyBuilderP
     setSaveStatus('success');
   };
 
+  const onFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const fn = typeof handleSubmit === 'function' ? handleSubmit(save) : null;
+    if (typeof fn === 'function') fn(e);
+    else e.preventDefault();
+  };
+
   return (
-    <form onSubmit={handleSubmit(save)} className="space-y-6">
+    <form onSubmit={onFormSubmit} className="space-y-6">
       <Card>
         <CardHeader>
           <h3 className="text-lg font-medium">{text.limitsTitle}</h3>

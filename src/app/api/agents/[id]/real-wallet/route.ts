@@ -28,13 +28,22 @@ export async function GET(
       return NextResponse.json({ error: 'Agent is not in WALLET mode' }, { status: 400 });
     }
 
-    const { getRealWalletBalance } = await import('@/lib/agents/realWallet');
-    const balance = await getRealWalletBalance(agent.id, user.id);
+    let address: string | null = agent.realWalletAddress;
+    let balanceWei = '0';
+    try {
+      const { getRealWalletBalance } = await import('@/lib/agents/realWallet');
+      const balance = await getRealWalletBalance(agent.id, user.id);
+      address = balance.address;
+      balanceWei = balance.balanceWei;
+    } catch (err) {
+      console.error('GET /api/agents/[id]/real-wallet getRealWalletBalance', err);
+      // Возвращаем 200 с данными агента без баланса, чтобы карточка показала «Кошелёк ещё не создан» или адрес
+    }
 
     return NextResponse.json({
       agentId: agent.id,
-      address: balance.address,
-      balanceWei: balance.balanceWei,
+      address,
+      balanceWei,
       network: agent.realWalletNetwork ?? null,
       asset: agent.realWalletAsset ?? 'USDC',
       realTradingEnabled: agent.realTradingEnabled,

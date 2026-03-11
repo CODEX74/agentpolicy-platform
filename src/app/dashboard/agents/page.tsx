@@ -4,7 +4,6 @@ import { authOptions } from '@/lib/auth/options';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { AgentsPageContent } from '@/components/dashboard/AgentsPageContent';
 import { prisma } from '@/lib/db/prisma';
-import { getOpenAiKeyByEmail } from '@/lib/db/user-openai';
 
 export default async function AgentsPage() {
   const session = await getServerSession(authOptions);
@@ -12,24 +11,17 @@ export default async function AgentsPage() {
 
   // Упрощённый тип: нам важно только, что у user есть массив agents.
   let user: { agents?: unknown[] } | null = null;
-  let hasOpenAiKey = false;
-
   try {
-    const [userRow, hasKey] = await Promise.all([
-      prisma.user.findUnique({
-        where: { email: session.user.email },
-        include: { agents: { orderBy: { createdAt: 'desc' } } },
-      }),
-      getOpenAiKeyByEmail(session.user.email).then((k) => Boolean(k)),
-    ]);
+    const userRow = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      include: { agents: { orderBy: { createdAt: 'desc' } } },
+    });
     user = userRow;
-    hasOpenAiKey = hasKey;
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg.includes('WITHIN GROUP is required for ordered-set aggregate mode')) {
       console.error('[AgentsPage] prisma error suppressed for dashboard/agents:', msg);
       user = null;
-      hasOpenAiKey = false;
     } else {
       throw e;
     }
@@ -65,7 +57,7 @@ export default async function AgentsPage() {
 
   return (
     <DashboardLayout>
-      <AgentsPageContent agents={agents} hasOpenAiKey={hasOpenAiKey} />
+      <AgentsPageContent agents={agents} hasOpenAiKey={true} />
     </DashboardLayout>
   );
 }

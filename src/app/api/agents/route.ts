@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db/prisma';
 import { getOpenAiKeyByEmail } from '@/lib/db/user-openai';
 import { PRICING_PLANS } from '@/lib/constants/pricing';
 import { z } from 'zod';
+import { createRealAgentWallet } from '@/lib/agents/realWallet';
 
 const createAgentSchema = z.object({
   name: z.string().min(1).max(200),
@@ -14,18 +15,46 @@ const createAgentSchema = z.object({
   mode: z.enum(['DEMO', 'WALLET']).optional(),
 });
 
-function toAgentResponse(a: { id: string; userId: string; name: string; description: string | null; agentType: 'INVESTOR' | 'TRADER'; isActive: boolean; walletId: string | null; walletAddress: string | null; demoBalance: number | null; initialDemoBalance: number | null; run24_7: boolean; createdAt: Date; updatedAt: Date }) {
+function toAgentResponse(a: {
+  id: string;
+  userId: string;
+  name: string;
+  description: string | null;
+  agentType: 'INVESTOR' | 'TRADER';
+  mode: 'DEMO' | 'WALLET';
+  isActive: boolean;
+  walletId: string | null;
+  walletAddress: string | null;
+  demoBalance: number | null;
+  initialDemoBalance: number | null;
+  realWalletAddress: string | null;
+  realWalletNetwork: string | null;
+  realWalletAsset: string | null;
+  realTradingEnabled: boolean;
+  realMaxPositionUsd: number | null;
+  realDailyLimitUsd: number | null;
+  run24_7: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
   return {
     _id: a.id,
     userEmail: '', // not needed for list
     name: a.name,
     description: a.description ?? '',
     agentType: a.agentType,
+    mode: a.mode,
     isActive: a.isActive,
     walletId: a.walletId ?? undefined,
     walletAddress: a.walletAddress ?? undefined,
     demoBalance: a.demoBalance ?? undefined,
     initialDemoBalance: a.initialDemoBalance ?? undefined,
+    realWalletAddress: a.realWalletAddress ?? undefined,
+    realWalletNetwork: a.realWalletNetwork ?? undefined,
+    realWalletAsset: a.realWalletAsset ?? undefined,
+    realTradingEnabled: a.realTradingEnabled,
+    realMaxPositionUsd: a.realMaxPositionUsd ?? undefined,
+    realDailyLimitUsd: a.realDailyLimitUsd ?? undefined,
     run24_7: a.run24_7,
     createdAt: a.createdAt.toISOString(),
     updatedAt: a.updatedAt.toISOString(),
@@ -96,9 +125,16 @@ export async function POST(req: NextRequest) {
         name: data.name,
         description: data.description ?? '',
         agentType: data.agentType ?? 'INVESTOR',
+        mode: (data.mode ?? 'DEMO') as 'DEMO' | 'WALLET',
       },
     });
-    return NextResponse.json(toAgentResponse(agent));
+
+    const finalAgent =
+      data.mode === 'WALLET'
+        ? await createRealAgentWallet(user.id, agent.id)
+        : agent;
+
+    return NextResponse.json(toAgentResponse(finalAgent as unknown as Parameters<typeof toAgentResponse>[0]));
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: err.flatten() }, { status: 400 });

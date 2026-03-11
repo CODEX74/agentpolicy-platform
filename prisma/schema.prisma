@@ -26,8 +26,9 @@ model User {
   sessions      Session[]
   agents        Agent[]
   policies      Policy[]
-  wallets       Wallet[]
+  wallets          Wallet[]
   demoTransactions DemoTransaction[]
+  realTransactions RealTransaction[]
 }
 
 model Account {
@@ -70,17 +71,31 @@ enum AgentType {
   TRADER
 }
 
+enum AgentMode {
+  DEMO
+  WALLET
+}
+
 model Agent {
   id                String   @id @default(cuid())
   userId            String
   name              String
   description       String?
   agentType         AgentType @default(INVESTOR)
+  mode              AgentMode @default(DEMO)
   isActive          Boolean  @default(true)
   walletId          String?
   walletAddress     String?
   demoBalance       Float?
   initialDemoBalance Float?
+  // Real-wallet (custody) trading fields
+  realWalletAddress   String?
+  realWalletNetwork   String?  @default("base")
+  realWalletAsset     String?  @default("USDC")
+  realTradingEnabled  Boolean  @default(false)
+  realMaxPositionUsd  Float?
+  realDailyLimitUsd   Float?
+  realNotes           String?
   run24_7           Boolean  @default(false)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -88,6 +103,7 @@ model Agent {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   policies Policy[]
   demoTransactions DemoTransaction[]
+  realTransactions RealTransaction[]
 }
 
 model Policy {
@@ -145,4 +161,23 @@ model DemoTransaction {
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+}
+
+model RealTransaction {
+  id            String   @id @default(cuid())
+  agentId       String
+  userId        String
+  txHash        String
+  asset         String
+  amountUsd     Float
+  side          String   // 'buy' | 'sell'
+  network       String   @default("base")
+  walletAddress String
+  createdAt     DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([agentId, createdAt])
 }

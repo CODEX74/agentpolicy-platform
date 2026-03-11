@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useLang, withLang } from '@/contexts/LanguageContext';
 import { PolicyBuilder } from '@/components/dashboard/PolicyBuilder';
 import { AgentDemoCard } from '@/components/dashboard/AgentDemoCard';
+import { RealWalletCard } from '@/components/dashboard/RealWalletCard';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 
@@ -70,7 +71,14 @@ export function AgentDetailContent({
   demoPositions,
 }: {
   agentId: string;
-  agent: { name: string; walletId: string | null; walletAddress: string | null; demoBalance: number | null };
+  agent: {
+    name: string;
+    walletId: string | null;
+    walletAddress: string | null;
+    demoBalance: number | null;
+    mode: 'DEMO' | 'WALLET';
+    realWalletAddress?: string | null;
+  };
   initialPolicy: InitialPolicy;
   demoPositions: DemoPosition[];
 }) {
@@ -130,6 +138,7 @@ export function AgentDetailContent({
         </div>
       </div>
       <AgentDemoCard agentId={agentId} />
+      {agent.mode === 'WALLET' && <RealWalletCard agentId={agentId} />}
       <PolicyBuilder agentId={agentId} initialPolicy={initialPolicy} />
       <Card>
         <CardHeader>

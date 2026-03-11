@@ -27,13 +27,6 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
   });
   if (!agentRow) notFound();
 
-  const agent = {
-    name: agentRow.name,
-    walletId: agentRow.walletId,
-    walletAddress: agentRow.walletAddress,
-    demoBalance: agentRow.demoBalance,
-  };
-
   const policyRow = await prisma.policy.findUnique({
     where: { userId_agentId: { userId: user.id, agentId: id } },
   });
@@ -112,10 +105,12 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
       <AgentDetailContent
         agentId={id!}
         agent={{
-          name: agent.name,
-          walletId: agent.walletId ?? null,
-          walletAddress: agent.walletAddress ?? null,
-          demoBalance: agent.demoBalance,
+          name: agentRow.name,
+          walletId: agentRow.walletId ?? null,
+          walletAddress: agentRow.walletAddress ?? null,
+          demoBalance: agentRow.demoBalance,
+          mode: agentRow.mode,
+          realWalletAddress: agentRow.realWalletAddress,
         }}
         initialPolicy={initialPolicy}
         demoPositions={demoPositions}

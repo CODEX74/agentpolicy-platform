@@ -9,18 +9,49 @@ const updateAgentSchema = z.object({
   description: z.string().max(1000).optional(),
   isActive: z.boolean().optional(),
   agentType: z.enum(['INVESTOR', 'TRADER']).optional(),
+  mode: z.enum(['DEMO', 'WALLET']).optional(),
+  realTradingEnabled: z.boolean().optional(),
+  realMaxPositionUsd: z.number().nullable().optional(),
+  realDailyLimitUsd: z.number().nullable().optional(),
+  realNotes: z.string().max(2000).nullable().optional(),
 });
 
-function toAgentResponse(a: { id: string; name: string; description: string | null; agentType: 'INVESTOR' | 'TRADER'; isActive: boolean; walletId: string | null; walletAddress: string | null; demoBalance: number | null; run24_7: boolean }) {
+function toAgentResponse(a: {
+  id: string;
+  name: string;
+  description: string | null;
+  agentType: 'INVESTOR' | 'TRADER';
+  mode: 'DEMO' | 'WALLET';
+  isActive: boolean;
+  walletId: string | null;
+  walletAddress: string | null;
+  demoBalance: number | null;
+  realWalletAddress: string | null;
+  realWalletNetwork: string | null;
+  realWalletAsset: string | null;
+  realTradingEnabled: boolean;
+  realMaxPositionUsd: number | null;
+  realDailyLimitUsd: number | null;
+  realNotes: string | null;
+  run24_7: boolean;
+}) {
   return {
     _id: a.id,
     name: a.name,
     description: a.description ?? '',
     agentType: a.agentType,
+    mode: a.mode,
     isActive: a.isActive,
     walletId: a.walletId ?? undefined,
     walletAddress: a.walletAddress ?? undefined,
     demoBalance: a.demoBalance ?? undefined,
+    realWalletAddress: a.realWalletAddress ?? undefined,
+    realWalletNetwork: a.realWalletNetwork ?? undefined,
+    realWalletAsset: a.realWalletAsset ?? undefined,
+    realTradingEnabled: a.realTradingEnabled,
+    realMaxPositionUsd: a.realMaxPositionUsd ?? undefined,
+    realDailyLimitUsd: a.realDailyLimitUsd ?? undefined,
+    realNotes: a.realNotes ?? undefined,
     run24_7: a.run24_7,
   };
 }
@@ -79,6 +110,11 @@ export async function PATCH(
         ...(data.description != null && { description: data.description }),
         ...(data.isActive != null && { isActive: data.isActive }),
         ...(data.agentType != null && { agentType: data.agentType }),
+        ...(data.mode != null && { mode: data.mode }),
+        ...(data.realTradingEnabled != null && { realTradingEnabled: data.realTradingEnabled }),
+        ...(data.realMaxPositionUsd !== undefined && { realMaxPositionUsd: data.realMaxPositionUsd }),
+        ...(data.realDailyLimitUsd !== undefined && { realDailyLimitUsd: data.realDailyLimitUsd }),
+        ...(data.realNotes !== undefined && { realNotes: data.realNotes }),
       },
     });
     return NextResponse.json(toAgentResponse(updated));

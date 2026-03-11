@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { getDemoPositions, type DemoPosition } from '@/lib/db/demo-transactions';
-import { runAgentOnce, type RunAgentResult } from '@/lib/agent-run';
+import { runAgentOnce, type RunAgentResult, getMockMarketTrend } from '@/lib/agent-run';
 import { sendTelegramMessageToChat } from '@/lib/telegram';
 import { getTelegramIdByEmail } from '@/lib/db/user-telegram';
 import { formatAssetQuantity } from '@/lib/utils/format';
+import { getAgentTradeDecision, getMarketPrices, getUsdtPriceUsd } from '@/lib/ai/agent-trader';
 
 /**
  * Крон для агентов с run24_7: запускает один цикл принятия решения для каждого такого агента.
@@ -58,6 +59,131 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
     results.push({ agentId: agent.id, agentName: agent.name, userEmail, result, positions });
   }
 
+  // Real-wallet agents (mode = WALLET, realTradingEnabled = true)
+  const realAgents = await prisma.agent.findMany({
+    where: { run24_7: true, mode: 'WALLET', realTradingEnabled: true },
+    include: { user: true },
+  });
+
+  const realResults: {
+    agentId: string;
+    agentName: string;
+    userEmail: string;
+    action: string;
+    reason?: string;
+    error?: string;
+    asset?: string;
+    amountUsd?: number;
+  }[] = [];
+
+  if (realAgents.length > 0) {
+    const [marketPrices, usdtPrice] = await Promise.all([getMarketPrices(), getUsdtPriceUsd()]);
+    const marketTrend = getMockMarketTrend();
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (const agent of realAgents) {
+      const userEmail = agent.user.email;
+      if (!userEmail || !agent.realWalletAddress) continue;
+
+      const agg = await prisma.realTransaction.aggregate({
+        where: {
+          agentId: agent.id,
+          userId: agent.user.id,
+          createdAt: { gte: today },
+        },
+        _sum: { amountUsd: true },
+      });
+      const spentToday = agg._sum.amountUsd ?? 0;
+      const dailyLimit = agent.realDailyLimitUsd ?? -1;
+      const maxPerTx = agent.realMaxPositionUsd ?? -1;
+
+      const input = {
+        agentName: agent.name,
+        agentType: agent.agentType as 'INVESTOR' | 'TRADER',
+        demoBalanceEth: dailyLimit > 0 ? dailyLimit : 0,
+        policy: {
+          dailyLimit: dailyLimit,
+          weeklyLimit: -1,
+          maxPerTransaction: maxPerTx,
+          allowedOperations: ['buy', 'sell'],
+        },
+        spentTodayEth: spentToday,
+        spentWeekEth: spentToday,
+        ethPriceUsd: usdtPrice || 1,
+        marketPrices,
+        marketTrend,
+      } as const;
+
+      const decisionResult = await getAgentTradeDecision(input);
+      const decision = decisionResult.decision;
+
+      if (!decision) {
+        realResults.push({
+          agentId: agent.id,
+          agentName: agent.name,
+          userEmail,
+          action: 'hold',
+          reason: decisionResult.error,
+          error: decisionResult.error,
+        });
+        continue;
+      }
+
+      const amount = decision.amountEth ?? 0;
+      if (decision.action !== 'buy_coin' || amount <= 0) {
+        realResults.push({
+          agentId: agent.id,
+          agentName: agent.name,
+          userEmail,
+          action: decision.action,
+          reason: decision.reason,
+          asset: decision.asset,
+        });
+        continue;
+      }
+
+      const allowedByDaily = dailyLimit < 0 || spentToday + amount <= dailyLimit;
+      const allowedByMax = maxPerTx < 0 || amount <= maxPerTx;
+      if (!allowedByDaily || !allowedByMax) {
+        realResults.push({
+          agentId: agent.id,
+          agentName: agent.name,
+          userEmail,
+          action: 'hold',
+          reason: `Решение отклонено по лимитам real-wallet. ${decision.reason}`,
+          asset: decision.asset,
+        });
+        continue;
+      }
+
+      // MVP: фиксируем решение в базе как RealTransaction без реальной on-chain транзакции.
+      await prisma.realTransaction.create({
+        data: {
+          agentId: agent.id,
+          userId: agent.user.id,
+          txHash: 'virtual',
+          asset: decision.asset ?? 'USDC',
+          amountUsd: amount,
+          side: 'buy',
+          network: agent.realWalletNetwork ?? 'base',
+          walletAddress: agent.realWalletAddress,
+        },
+      });
+
+      realResults.push({
+        agentId: agent.id,
+        agentName: agent.name,
+        userEmail,
+        action: 'buy_coin',
+        reason: decision.reason,
+        asset: decision.asset,
+        amountUsd: amount,
+      });
+    }
+  }
+
   const resultsForJson = results.map((r) => ({
     agentId: r.agentId,
     agentName: r.agentName,
@@ -72,22 +198,30 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
   }));
 
   // Уведомления: отправляем каждому пользователю в его Telegram chat id (если привязан)
-  const byUser = new Map<string, typeof results>();
+  const byUser = new Map<string, { demo: (typeof results)[number][]; real: typeof realResults }>();
   for (const r of results) {
     const key = r.userEmail.toLowerCase();
-    byUser.set(key, [...(byUser.get(key) ?? []), r]);
+    const prev = byUser.get(key) ?? { demo: [], real: [] };
+    byUser.set(key, { demo: [...prev.demo, r], real: prev.real });
+  }
+  for (const rr of realResults) {
+    const key = rr.userEmail.toLowerCase();
+    const prev = byUser.get(key) ?? { demo: [], real: [] };
+    byUser.set(key, { demo: prev.demo, real: [...prev.real, rr] });
   }
 
   const telegramByUser: Record<string, { sent: boolean; error?: string }> = {};
-  for (const [email, userResults] of byUser.entries()) {
+  for (const [email, grouped] of byUser.entries()) {
     const chatId = await getTelegramIdByEmail(email);
     if (!chatId) continue;
+    const hasDemo = grouped.demo.length > 0;
+    const hasReal = grouped.real.length > 0;
     const lines =
-      userResults.length > 0
+      hasDemo || hasReal
         ? [
             `🤖 Агенты 24/7 (${new Date().toLocaleString('ru-RU')})`,
             '',
-            ...userResults.flatMap((r, idx) => {
+            ...grouped.demo.flatMap((r, idx) => {
               const a =
                 r.result.action === 'hold'
                   ? '⏸ Держать'
@@ -135,6 +269,23 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
               const block = parts.join('\n');
               return idx === userResults.length - 1 ? [block] : [block, ''];
             }),
+            ...(hasReal
+              ? [
+                  '',
+                  '💼 Реальные решения (MVP, без on-chain сделок):',
+                  '',
+                  ...grouped.real.flatMap((r, idx) => {
+                    const header = `• ${r.agentName}: ${r.action === 'buy_coin' && r.asset ? `Покупка ${r.asset}` : r.action}`;
+                    const amountLine =
+                      r.amountUsd != null ? `Сумма: ${r.amountUsd.toFixed(2)} USDC` : undefined;
+                    const parts = [header];
+                    if (amountLine) parts.push(amountLine);
+                    if (r.reason) parts.push(`Обоснование: ${r.reason}`);
+                    const block = parts.join('\n');
+                    return idx === grouped.real.length - 1 ? [block] : [block, ''];
+                  }),
+                ]
+              : []),
           ]
         : [`🤖 Крон 24/7 (${new Date().toLocaleString('ru-RU')})`, '', 'Нет активных агентов 24/7.'];
     const res = await sendTelegramMessageToChat(lines.join('\n').slice(0, 4096), chatId);
@@ -150,6 +301,7 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
     ok: true,
     ran: agents.length,
     results: resultsForJson,
+    realResults,
     telegramByUser,
     hintEmpty,
   });

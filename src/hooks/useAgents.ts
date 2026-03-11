@@ -26,17 +26,33 @@ export function useAgents() {
     refetch();
   }, [refetch]);
 
-  const createAgent = useCallback(async (body: { name: string; description?: string; moltbookId?: string }) => {
-    const res = await fetch('/api/agents', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) throw new Error('Failed to create');
-    const created = await res.json();
-    setAgents((prev) => [created, ...prev]);
-    return created;
-  }, []);
+  const createAgent = useCallback(
+    async (body: {
+      name: string;
+      description?: string;
+      moltbookId?: string;
+      agentType?: 'INVESTOR' | 'TRADER';
+      mode?: 'DEMO' | 'WALLET';
+    }) => {
+      const res = await fetch('/api/agents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) {
+        const message =
+          payload && typeof payload.error === 'string'
+            ? payload.error
+            : 'Failed to create agent';
+        throw new Error(message);
+      }
+      const created = payload ?? {};
+      setAgents((prev) => [created, ...prev]);
+      return created;
+    },
+    []
+  );
 
   return { agents, isLoading, error, refetch, createAgent };
 }

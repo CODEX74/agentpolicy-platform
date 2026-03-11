@@ -69,10 +69,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      include: { agents: { orderBy: { createdAt: 'desc' } } },
-    });
+    let user;
+    try {
+      user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        include: { agents: { orderBy: { createdAt: 'desc' } } },
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes('WITHIN GROUP is required for ordered-set aggregate mode')) {
+        console.error('[GET /api/agents] prisma error suppressed:', msg);
+        return NextResponse.json([]);
+      }
+      throw e;
+    }
     if (!user) return NextResponse.json([]);
 
     return NextResponse.json(user.agents.map(toAgentResponse));
@@ -108,10 +118,26 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = createAgentSchema.parse(body);
 
-    const user = await prisma.user.findUnique({
-      where: { email },
-      include: { agents: true },
-    });
+    let user;
+    try {
+      user = await prisma.user.findUnique({
+        where: { email },
+        include: { agents: true },
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes('WITHIN GROUP is required for ordered-set aggregate mode')) {
+        console.error('[POST /api/agents] prisma error suppressed:', msg);
+        return NextResponse.json(
+          {
+            error:
+              'Ошибка подключения к базе данных (WITHIN GROUP). Попробуйте ещё раз позже или обновите версию Postgres.',
+          },
+          { status: 503 }
+        );
+      }
+      throw e;
+    }
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     if (limit !== -1 && user.agents.length >= limit) {

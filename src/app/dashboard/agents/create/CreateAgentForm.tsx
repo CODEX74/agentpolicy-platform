@@ -75,7 +75,12 @@ export function CreateAgentForm() {
       body: JSON.stringify(data),
     });
     if (!res.ok) {
-      setError(text.error);
+      const payload = await res.json().catch(() => null);
+      const serverError =
+        payload && typeof payload.error === 'string'
+          ? payload.error
+          : text.error;
+      setError(serverError);
       return;
     }
     const agent = await res.json();

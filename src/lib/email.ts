@@ -32,7 +32,7 @@ export async function sendEmail(options: {
   }
 
   await transporter.sendMail({
-    from: `"AgentPolicy" <${FROM_EMAIL}>`,
+    from: `"AgentWallet" <${FROM_EMAIL}>`,
     to: options.to,
     subject: options.subject,
     text: options.text,

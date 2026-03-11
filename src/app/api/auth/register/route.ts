@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     try {
       await sendEmail({
         to: email,
-        subject: 'Подтверждение регистрации в AgentPolicy',
+        subject: 'Подтверждение регистрации в AgentWallet',
         text: `Ваш код подтверждения: ${code}\n\nКод действует 15 минут. Введите его на странице подтверждения email.`,
       });
     } catch (e) {

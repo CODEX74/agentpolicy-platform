@@ -7,7 +7,7 @@ import { buttonVariants } from '@/lib/utils/button-variants';
 import { cn } from '@/lib/utils/cn';
 import { withLang } from '@/contexts/LanguageContext';
 
-const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'AgentPolicy';
+const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'AgentWallet';
 
 export function Header() {
   const { data: session, status } = useSession();

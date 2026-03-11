@@ -1,4 +1,4 @@
-# AgentPolicy Platform
+# AgentWallet Platform
 
 Платформа для управления финансами AI-агентов с визуальным конструктором политик. Интеграция с Coinbase CDP и Moltbook API.
 
@@ -18,7 +18,7 @@
 ### 1. Установка
 
 ```bash
-cd agentpolicy-platform
+cd AgentWallet-platform
 npm install
 ```
 

@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     try {
       await sendEmail({
         to: email,
-        subject: 'Сброс пароля AgentPolicy',
+        subject: 'Сброс пароля AgentWallet',
         text: `Ваш код для сброса пароля: ${code}\n\nКод действует 15 минут. Введите его на странице сброса пароля.`,
       });
     } catch (e) {

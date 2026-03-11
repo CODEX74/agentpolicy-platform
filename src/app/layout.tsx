@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: `${process.env.NEXT_PUBLIC_APP_NAME ?? 'AgentPolicy'} — Управление финансами AI-агентов`,
+  title: `${process.env.NEXT_PUBLIC_APP_NAME ?? 'AgentWallet'} — Управление финансами AI-агентов`,
   description: 'Платформа для управления финансами AI-агентов с визуальным конструктором политик',
 };
 

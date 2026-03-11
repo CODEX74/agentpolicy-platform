@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { buttonVariants } from '@/lib/utils/button-variants';
 import { cn } from '@/lib/utils/cn';
 
-const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'AgentPolicy';
+const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'AgentWallet';
 
 type Lang = 'ru' | 'en';
 

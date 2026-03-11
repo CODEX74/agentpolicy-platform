@@ -66,8 +66,8 @@ export async function POST(req: NextRequest) {
     try {
       await sendEmail({
         to: targetEmail,
-        subject: 'Подтверждение смены email в AgentPolicy',
-        text: `Вы запросили смену email для своего аккаунта AgentPolicy.\n\nНовый email: ${targetEmail}\nКод подтверждения: ${code}\n\nКод действует 15 минут. Если вы не инициировали смену email — просто проигнорируйте это письмо.`,
+        subject: 'Подтверждение смены email в AgentWallet',
+        text: `Вы запросили смену email для своего аккаунта AgentWallet.\n\nНовый email: ${targetEmail}\nКод подтверждения: ${code}\n\nКод действует 15 минут. Если вы не инициировали смену email — просто проигнорируйте это письмо.`,
       });
     } catch (e) {
       console.error('Failed to send email change confirmation', e);

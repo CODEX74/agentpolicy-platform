@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useLang, withLang } from '@/contexts/LanguageContext';
 
-const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'AgentPolicy';
+const appName = process.env.NEXT_PUBLIC_APP_NAME ?? 'AgentWallet';
 
 const t = {
   ru: {
@@ -68,7 +68,7 @@ export function Footer() {
           <div>
             <p className="font-medium text-zinc-900 dark:text-zinc-50">{text.contacts}</p>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-              support@agentpolicy.com
+              support@AgentWallet.com
             </p>
           </div>
         </div>

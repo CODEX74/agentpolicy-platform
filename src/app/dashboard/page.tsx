@@ -10,7 +10,21 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) redirect('/');
 
-  let user: { agents?: unknown[] } | null = null;
+  type AgentRow = {
+    id: string;
+    name: string;
+    description: string | null;
+    isActive: boolean;
+    walletId: string | null;
+    walletAddress: string | null;
+    demoBalance: number | null;
+    initialDemoBalance: number | null;
+    run24_7: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+
+  let user: { agents?: AgentRow[] } | null = null;
   try {
     const userRow = await prisma.user.findUnique({
       where: { email: session.user.email },
@@ -28,7 +42,7 @@ export default async function DashboardPage() {
   }
 
   const hasOpenAiKey = await getOpenAiKeyByEmail(session.user.email).then((k) => Boolean(k));
-  const agents = (user?.agents ?? []).map((a) => ({
+  const agents = ((user?.agents as AgentRow[] | undefined) ?? []).map((a) => ({
     _id: a.id,
     name: a.name,
     description: a.description ?? '',

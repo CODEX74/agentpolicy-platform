@@ -5,7 +5,8 @@ import { prisma } from '@/lib/db/prisma';
 import { getOpenAiKeyByEmail } from '@/lib/db/user-openai';
 import { PRICING_PLANS } from '@/lib/constants/pricing';
 import { z } from 'zod';
-import { createRealAgentWallet } from '@/lib/agents/realWallet';
+
+export const dynamic = 'force-dynamic';
 
 const createAgentSchema = z.object({
   name: z.string().min(1).max(200),
@@ -129,10 +130,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const finalAgent =
-      data.mode === 'WALLET'
-        ? await createRealAgentWallet(user.id, agent.id)
-        : agent;
+    let finalAgent = agent;
+    if (data.mode === 'WALLET') {
+      const { createRealAgentWallet } = await import('@/lib/agents/realWallet');
+      finalAgent = await createRealAgentWallet(user.id, agent.id);
+    }
 
     return NextResponse.json(toAgentResponse(finalAgent as unknown as Parameters<typeof toAgentResponse>[0]));
   } catch (err) {

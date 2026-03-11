@@ -69,23 +69,17 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let user;
-    try {
-      user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        include: { agents: { orderBy: { createdAt: 'desc' } } },
-      });
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (msg.includes('WITHIN GROUP is required for ordered-set aggregate mode')) {
-        console.error('[GET /api/agents] prisma error suppressed:', msg);
-        return NextResponse.json([]);
-      }
-      throw e;
-    }
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
     if (!user) return NextResponse.json([]);
 
-    return NextResponse.json(user.agents.map(toAgentResponse));
+    const agents = await prisma.agent.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return NextResponse.json(agents.map(toAgentResponse));
   } catch (err) {
     console.error('GET /api/agents', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -118,29 +112,16 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = createAgentSchema.parse(body);
 
-    let user;
-    try {
-      user = await prisma.user.findUnique({
-        where: { email },
-        include: { agents: true },
-      });
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (msg.includes('WITHIN GROUP is required for ordered-set aggregate mode')) {
-        console.error('[POST /api/agents] prisma error suppressed:', msg);
-        return NextResponse.json(
-          {
-            error:
-              'Ошибка подключения к базе данных (WITHIN GROUP). Попробуйте ещё раз позже или обновите версию Postgres.',
-          },
-          { status: 503 }
-        );
-      }
-      throw e;
-    }
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    if (limit !== -1 && user.agents.length >= limit) {
+    const agentsCount = await prisma.agent.count({
+      where: { userId: user.id },
+    });
+
+    if (limit !== -1 && agentsCount >= limit) {
       return NextResponse.json(
         { error: 'Достигнут лимит агентов по вашему тарифу' },
         { status: 403 }

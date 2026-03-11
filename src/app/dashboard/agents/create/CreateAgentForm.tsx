@@ -1,8 +1,7 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -61,22 +60,29 @@ export function CreateAgentForm() {
   const lang = useLang();
   const text = t[lang as Lang];
   const [error, setError] = useState<string | null>(null);
-  const { register, getValues, formState: { isSubmitting } } = useForm<FormData>({
-    defaultValues: { agentType: 'INVESTOR', mode: 'DEMO' },
-  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [agentType, setAgentType] = useState<'INVESTOR' | 'TRADER'>('INVESTOR');
+  const [mode, setMode] = useState<'DEMO' | 'WALLET'>('DEMO');
 
-  const handleFormSubmit = useCallback(
-    async (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      setError(null);
-      const raw = getValues();
-      const result = schema.safeParse(raw);
-      if (!result.success) {
-        const first = result.error.issues[0];
-        setError(first?.message ?? text.error);
-        return;
-      }
-      const data = result.data;
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    const result = schema.safeParse({
+      name: name.trim(),
+      description: description.trim() || undefined,
+      agentType,
+      mode,
+    });
+    if (!result.success) {
+      const first = result.error.issues[0];
+      setError(first?.message ?? text.error);
+      return;
+    }
+    const data = result.data;
+    setIsSubmitting(true);
+    try {
       const res = await fetch('/api/agents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -93,26 +99,36 @@ export function CreateAgentForm() {
       }
       const agent = await res.json();
       router.push(withLang(`/dashboard/agents/${agent._id}`, lang));
-    },
-    [getValues, router, lang, text.error]
-  );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
     <Card className="mt-6">
       <CardContent className="pt-6">
-        <form onSubmit={handleFormSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium">{text.name}</label>
-            <Input {...register('name')} placeholder={text.namePlaceholder} />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={text.namePlaceholder}
+            />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">{text.description}</label>
-            <Input {...register('description')} placeholder={text.descriptionPlaceholder} />
+            <Input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder={text.descriptionPlaceholder}
+            />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">{text.agentType}</label>
             <select
-              {...register('agentType')}
+              value={agentType}
+              onChange={(e) => setAgentType(e.target.value as 'INVESTOR' | 'TRADER')}
               className="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-400 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50"
             >
               <option value="INVESTOR">{text.investor}</option>
@@ -128,17 +144,20 @@ export function CreateAgentForm() {
               <label className="flex items-center gap-2">
                 <input
                   type="radio"
+                  name="mode"
                   value="DEMO"
-                  {...register('mode')}
-                  defaultChecked
+                  checked={mode === 'DEMO'}
+                  onChange={() => setMode('DEMO')}
                 />
                 <span>{text.modeDemo}</span>
               </label>
               <label className="flex items-center gap-2">
                 <input
                   type="radio"
+                  name="mode"
                   value="WALLET"
-                  {...register('mode')}
+                  checked={mode === 'WALLET'}
+                  onChange={() => setMode('WALLET')}
                 />
                 <span>{text.modeWallet}</span>
               </label>

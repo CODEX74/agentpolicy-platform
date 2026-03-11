@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import type { Resolver } from 'react-hook-form';
+import type { Resolver, ResolverResult } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -21,7 +21,8 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 function createZodResolver<T extends z.ZodType>(schema: T): Resolver<z.infer<T>> {
-  return async (values) => {
+  type TForm = z.infer<T>;
+  return async (values): Promise<ResolverResult<TForm>> => {
     const result = schema.safeParse(values);
     if (result.success) {
       return { values: result.data, errors: {} };
@@ -33,7 +34,7 @@ function createZodResolver<T extends z.ZodType>(schema: T): Resolver<z.infer<T>>
         errors[path] = { message: issue.message };
       }
     }
-    return { values: {}, errors };
+    return { values: {} as TForm, errors: errors as ResolverResult<TForm>['errors'] };
   };
 }
 

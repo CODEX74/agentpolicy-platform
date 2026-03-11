@@ -10,13 +10,34 @@ export default async function AgentsPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) redirect('/');
 
-  const [user, hasOpenAiKey] = await Promise.all([
-    prisma.user.findUnique({
-      where: { email: session.user.email },
-      include: { agents: { orderBy: { createdAt: 'desc' } } },
-    }),
-    getOpenAiKeyByEmail(session.user.email).then((k) => Boolean(k)),
-  ]);
+  let user:
+    | (Awaited<ReturnType<typeof prisma.user.findUnique>> & {
+        agents: { id: string; name: string; description: string | null; isActive: boolean; walletId: string | null; walletAddress: string | null; demoBalance: number | null; initialDemoBalance: number | null; run24_7: boolean; createdAt: Date; updatedAt: Date }[];
+      })
+    | null = null;
+  let hasOpenAiKey = false;
+
+  try {
+    const [userRow, hasKey] = await Promise.all([
+      prisma.user.findUnique({
+        where: { email: session.user.email },
+        include: { agents: { orderBy: { createdAt: 'desc' } } },
+      }) as Promise<NonNullable<typeof user>>,
+      getOpenAiKeyByEmail(session.user.email).then((k) => Boolean(k)),
+    ]);
+    user = userRow;
+    hasOpenAiKey = hasKey;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes('WITHIN GROUP is required for ordered-set aggregate mode')) {
+      console.error('[AgentsPage] prisma error suppressed for dashboard/agents:', msg);
+      user = null;
+      hasOpenAiKey = false;
+    } else {
+      throw e;
+    }
+  }
+
   const agents = (user?.agents ?? []).map((a) => ({
     _id: a.id,
     name: a.name,

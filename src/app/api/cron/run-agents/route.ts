@@ -39,10 +39,28 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const agents = await prisma.agent.findMany({
-    where: { run24_7: true, demoBalance: { gt: 0 } },
-    include: { user: true },
-  });
+  let agents;
+  try {
+    agents = await prisma.agent.findMany({
+      where: { run24_7: true, demoBalance: { gt: 0 } },
+      include: { user: true },
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes('WITHIN GROUP is required for ordered-set aggregate mode')) {
+      console.error('[cron run-agents] prisma.agent.findMany failed, skipping run:', msg);
+      return NextResponse.json({
+        ok: true,
+        ran: 0,
+        results: [],
+        realResults: [],
+        telegramByUser: {},
+        hintEmpty:
+          'Ошибка подключения к базе данных (WITHIN GROUP). Крон пропущен, проверьте версию Postgres.',
+      });
+    }
+    throw e;
+  }
   const results: {
     agentId: string;
     agentName: string;

@@ -10,11 +10,8 @@ export default async function AgentsPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) redirect('/');
 
-  let user:
-    | (Awaited<ReturnType<typeof prisma.user.findUnique>> & {
-        agents: { id: string; name: string; description: string | null; isActive: boolean; walletId: string | null; walletAddress: string | null; demoBalance: number | null; initialDemoBalance: number | null; run24_7: boolean; createdAt: Date; updatedAt: Date }[];
-      })
-    | null = null;
+  // Упрощённый тип: нам важно только, что у user есть массив agents.
+  let user: { agents?: unknown[] } | null = null;
   let hasOpenAiKey = false;
 
   try {
@@ -22,7 +19,7 @@ export default async function AgentsPage() {
       prisma.user.findUnique({
         where: { email: session.user.email },
         include: { agents: { orderBy: { createdAt: 'desc' } } },
-      }) as Promise<NonNullable<typeof user>>,
+      }),
       getOpenAiKeyByEmail(session.user.email).then((k) => Boolean(k)),
     ]);
     user = userRow;

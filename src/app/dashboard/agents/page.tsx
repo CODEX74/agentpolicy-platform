@@ -9,39 +9,17 @@ export default async function AgentsPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) redirect('/');
 
-  // Упрощённый тип: нам важно только, что у user есть массив agents.
-  let user: { agents?: unknown[] } | null = null;
-  try {
-    const userRow = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      include: { agents: { orderBy: { createdAt: 'desc' } } },
-    });
-    user = userRow;
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    if (msg.includes('WITHIN GROUP is required for ordered-set aggregate mode')) {
-      console.error('[AgentsPage] prisma error suppressed for dashboard/agents:', msg);
-      user = null;
-    } else {
-      throw e;
-    }
-  }
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
+  const agentsList = user
+    ? await prisma.agent.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'desc' },
+      })
+    : [];
 
-  type AgentRow = {
-    id: string;
-    name: string;
-    description: string | null;
-    isActive: boolean;
-    walletId: string | null;
-    walletAddress: string | null;
-    demoBalance: number | null;
-    initialDemoBalance: number | null;
-    run24_7: boolean;
-    createdAt: Date;
-    updatedAt: Date;
-  };
-
-  const agents = ((user?.agents as AgentRow[] | undefined) ?? []).map((a) => ({
+  const agents = agentsList.map((a) => ({
     _id: a.id,
     name: a.name,
     description: a.description ?? '',

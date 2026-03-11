@@ -16,12 +16,9 @@ export async function GET(req: NextRequest) {
   if (!userEmail) {
     return NextResponse.json({ text: 'Задайте TELEGRAM_USER_EMAIL в .env.local' });
   }
-  const user = await prisma.user.findUnique({
-    where: { email: userEmail },
-    include: { agents: true },
-  });
-  const agents = user?.agents ?? [];
-  if (agents.length === 0) {
+  const user = await prisma.user.findUnique({ where: { email: userEmail } });
+  const agents = user ? await prisma.agent.findMany({ where: { userId: user.id } }) : [];
+  if (!user || agents.length === 0) {
     return NextResponse.json({
       text: '📅 Оставшийся дневной лимит\n\nНет агентов. Создайте агента на сайте и настройте политику.',
     });
@@ -29,7 +26,7 @@ export async function GET(req: NextRequest) {
   const lines = ['📅 Оставшийся дневной лимит', ''];
   for (const agent of agents) {
     const policy = await prisma.policy.findUnique({
-      where: { userId_agentId: { userId: user!.id, agentId: agent.id } },
+      where: { userId_agentId: { userId: user.id, agentId: agent.id } },
     });
     const dailyLimit = policy?.dailyLimit ?? -1;
     const spentToday = await getDemoSpentToday(agent.id, userEmail);

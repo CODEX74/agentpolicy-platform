@@ -51,15 +51,13 @@ export async function GET(
   }
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { id },
-      include: { agents: true },
-    });
+    const user = await prisma.user.findUnique({ where: { id } });
     if (!user?.email) {
       return NextResponse.json({ error: 'User not found or has no email' }, { status: 404 });
     }
 
     const email = user.email;
+    const agents = await prisma.agent.findMany({ where: { userId: user.id } });
 
     const [demo, marketPrices] = await Promise.all([
       getDemoTransactionsByEmail(email),
@@ -72,8 +70,6 @@ export async function GET(
       date,
       balance: byDay[date] ?? 0,
     }));
-
-    const agents = user.agents ?? [];
 
     const agentBalances = agents.map((a) => ({
       agentId: a.id,

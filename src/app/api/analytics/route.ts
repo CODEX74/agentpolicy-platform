@@ -42,12 +42,13 @@ export async function GET() {
     const email = session.user.email;
     const [demo, user, marketPrices] = await Promise.all([
       getDemoTransactionsByEmail(email),
-      prisma.user.findUnique({
-        where: { email },
-        include: { agents: true },
-      }),
+      prisma.user.findUnique({ where: { email } }),
       getMarketPrices(),
     ]);
+
+    const agents = user
+      ? await prisma.agent.findMany({ where: { userId: user.id } })
+      : [];
 
     const byDay = aggregateByDay(demo);
     const dates = lastNDays(DAYS_BACK);
@@ -55,8 +56,6 @@ export async function GET() {
       date,
       balance: byDay[date] ?? 0,
     }));
-
-    const agents = user?.agents ?? [];
 
     // Балансы агентов (демо)
     const agentBalances = agents.map((a) => ({

@@ -21,13 +21,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ text: 'Задайте TELEGRAM_USER_EMAIL в .env.local' });
   }
   const [userData, marketPrices] = await Promise.all([
-    prisma.user.findUnique({
-      where: { email: userEmail },
-      include: { agents: true },
-    }),
+    prisma.user.findUnique({ where: { email: userEmail } }),
     getMarketPrices(),
   ]);
-  const agents = userData?.agents ?? [];
+  const agents = userData
+    ? await prisma.agent.findMany({ where: { userId: userData.id } })
+    : [];
   const positionsByAgentId = new Map<string, { asset: string; quantity: number; avgPriceUsd: number; totalUsdSpent: number }[]>();
   for (const agent of agents) {
     const positions = await getDemoPositions(agent.id, userEmail);

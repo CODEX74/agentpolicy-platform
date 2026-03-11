@@ -237,11 +237,8 @@ export async function POST(req: NextRequest) {
       }
       await sendTelegramMessageToChat('Проверяю лимиты…', chatIdStr);
       try {
-        const user = await prisma.user.findUnique({
-          where: { email: userEmail },
-          include: { agents: true },
-        });
-        const agents = user?.agents ?? [];
+        const user = await prisma.user.findUnique({ where: { email: userEmail } });
+        const agents = user ? await prisma.agent.findMany({ where: { userId: user.id } }) : [];
         if (agents.length === 0) {
           await sendTelegramMessageToChat(
             '📅 Оставшийся дневной лимит\n\nНет агентов. Создайте агента на сайте и настройте политику.',
@@ -286,11 +283,8 @@ export async function POST(req: NextRequest) {
       }
       await sendTelegramMessageToChat('Считаю результат за сегодня…', chatIdStr);
       try {
-        const user = await prisma.user.findUnique({
-          where: { email: userEmail },
-          include: { agents: true },
-        });
-        const agents = user?.agents ?? [];
+        const user = await prisma.user.findUnique({ where: { email: userEmail } });
+        const agents = user ? await prisma.agent.findMany({ where: { userId: user.id } }) : [];
         if (agents.length === 0) {
           await sendTelegramMessageToChat(
             '📈 Результат за сегодня\n\nНет агентов с демо-балансом. Создайте агента на сайте.',
@@ -391,13 +385,12 @@ export async function POST(req: NextRequest) {
       }
 
       const [userData, marketPrices] = await Promise.all([
-        prisma.user.findUnique({
-          where: { email: userEmail },
-          include: { agents: true },
-        }),
+        prisma.user.findUnique({ where: { email: userEmail } }),
         getMarketPrices(),
       ]);
-      const agents = userData?.agents ?? [];
+      const agents = userData
+        ? await prisma.agent.findMany({ where: { userId: userData.id } })
+        : [];
       const agentsForMsg = agents.map((a) => ({ _id: a.id, name: a.name, demoBalance: a.demoBalance ?? 0 }));
       const positionsByAgentId = new Map<string, { asset: string; quantity: number; avgPriceUsd: number; totalUsdSpent: number }[]>();
       for (const agent of agents) {

@@ -150,6 +150,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: err.flatten() }, { status: 400 });
     }
     console.error('POST /api/agents', err);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const message = err instanceof Error ? err.message : 'Internal server error';
+    const safeMessage =
+      message.includes('agent_mode') || message.includes('WITHIN GROUP')
+        ? 'Ошибка базы данных. Выполните на сервере: npx prisma migrate deploy'
+        : message.slice(0, 200);
+    return NextResponse.json({ error: safeMessage }, { status: 500 });
   }
 }

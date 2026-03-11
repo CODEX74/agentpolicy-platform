@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db/prisma';
-import { getRealWalletBalance } from '@/lib/agents/realWallet';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(
   _req: NextRequest,
@@ -27,6 +28,7 @@ export async function GET(
       return NextResponse.json({ error: 'Agent is not in WALLET mode' }, { status: 400 });
     }
 
+    const { getRealWalletBalance } = await import('@/lib/agents/realWallet');
     const balance = await getRealWalletBalance(agent.id, user.id);
 
     return NextResponse.json({

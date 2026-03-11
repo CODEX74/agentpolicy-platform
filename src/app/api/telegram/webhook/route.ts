@@ -153,15 +153,22 @@ export async function POST(req: NextRequest) {
       const newLang: Lang = upper === 'EN' ? 'en' : 'ru';
       chatLang.set(chatIdStr, newLang);
       const tt = tStart[newLang];
-      await sendTelegramMessageToChat(tt.langSet, chatIdStr);
+      await sendTelegramMessageToChat(tt.langSet, chatIdStr, {
+        replyMarkup: {
+          remove_keyboard: true,
+        },
+      });
       return NextResponse.json({ ok: true });
     }
 
     // /start — приветствие и предложение выбрать язык
     if (command === '/start') {
       const tt = tStart[currentLang];
+      const chatIdInfoRu = `\n\nВаш chat id: ${chatIdStr}\nЗайдите на сайт → Настройки → Telegram и вставьте этот chat id.`;
+      const chatIdInfoEn = `\n\nYour chat id: ${chatIdStr}\nGo to the website → Settings → Telegram and paste this chat id.`;
+      const chatIdInfo = currentLang === 'en' ? chatIdInfoEn : chatIdInfoRu;
       await sendTelegramMessageToChat(
-        `${tt.greeting}\n\n${tt.chooseLang}`,
+        `${tt.greeting}\n\n${tt.chooseLang}${chatIdInfo}`,
         chatIdStr,
         {
           replyMarkup: {

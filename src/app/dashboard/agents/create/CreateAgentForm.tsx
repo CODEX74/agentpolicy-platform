@@ -3,7 +3,6 @@
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import type { Resolver, ResolverResult } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -19,24 +18,6 @@ const schema = z.object({
 });
 
 type FormData = z.infer<typeof schema>;
-
-function createZodResolver<T extends z.ZodType>(schema: T): Resolver<z.infer<T>> {
-  type TForm = z.infer<T>;
-  return async (values): Promise<ResolverResult<TForm>> => {
-    const result = schema.safeParse(values);
-    if (result.success) {
-      return { values: result.data, errors: {} };
-    }
-    const errors: Record<string, { message: string }> = {};
-    for (const issue of result.error.issues) {
-      const path = issue.path.join('.');
-      if (!errors[path]) {
-        errors[path] = { message: issue.message };
-      }
-    }
-    return { values: {} as TForm, errors: errors as ResolverResult<TForm>['errors'] };
-  };
-}
 
 const t = {
   ru: {
@@ -80,14 +61,22 @@ export function CreateAgentForm() {
   const lang = useLang();
   const text = t[lang as Lang];
   const [error, setError] = useState<string | null>(null);
-  const { register, handleSubmit, formState: { isSubmitting } } = useForm<FormData>({
-    resolver: createZodResolver(schema),
+  const { register, getValues, formState: { isSubmitting } } = useForm<FormData>({
     defaultValues: { agentType: 'INVESTOR', mode: 'DEMO' },
   });
 
-  const onSubmit = useCallback(
-    async (data: FormData) => {
+  const handleFormSubmit = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
       setError(null);
+      const raw = getValues();
+      const result = schema.safeParse(raw);
+      if (!result.success) {
+        const first = result.error.issues[0];
+        setError(first?.message ?? text.error);
+        return;
+      }
+      const data = result.data;
       const res = await fetch('/api/agents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -105,19 +94,7 @@ export function CreateAgentForm() {
       const agent = await res.json();
       router.push(withLang(`/dashboard/agents/${agent._id}`, lang));
     },
-    [router, lang, text.error]
-  );
-
-  const handleFormSubmit = useCallback(
-    (e: React.FormEvent<HTMLFormElement>) => {
-      const fn = typeof handleSubmit === 'function' ? handleSubmit(onSubmit) : null;
-      if (typeof fn === 'function') {
-        return fn(e);
-      }
-      e.preventDefault();
-      setError('Ошибка инициализации формы. Обновите страницу.');
-    },
-    [handleSubmit, onSubmit]
+    [getValues, router, lang, text.error]
   );
 
   return (

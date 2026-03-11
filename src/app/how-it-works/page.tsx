@@ -10,8 +10,13 @@ function getLang(searchParams?: { lang?: string }): Lang {
   return raw === 'en' ? 'en' : 'ru';
 }
 
-export default function HowItWorksPage({ searchParams }: { searchParams?: { lang?: string } }) {
-  getLang(searchParams);
+export default async function HowItWorksPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ lang?: string }>;
+}) {
+  const params = searchParams ? await searchParams : undefined;
+  getLang(params);
 
   return (
     <div className="flex min-h-screen flex-col">

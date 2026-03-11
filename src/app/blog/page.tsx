@@ -20,8 +20,13 @@ const copy: Record<Lang, { title: string; text: string }> = {
   },
 };
 
-export default function BlogPage({ searchParams }: { searchParams?: { lang?: string } }) {
-  const lang = getLang(searchParams);
+export default async function BlogPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ lang?: string }>;
+}) {
+  const params = searchParams ? await searchParams : undefined;
+  const lang = getLang(params);
   const t = copy[lang] ?? copy.ru;
 
   return (

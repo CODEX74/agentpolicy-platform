@@ -26,12 +26,13 @@ export default async function BlogPostPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams?: { lang?: string };
+  searchParams?: Promise<{ lang?: string }>;
 }) {
   const { slug } = await params;
   if (!slug) notFound();
 
-  const lang = getLang(searchParams);
+  const paramsResolved = searchParams ? await searchParams : undefined;
+  const lang = getLang(paramsResolved);
   const t = copy[lang] ?? copy.ru;
 
   return (

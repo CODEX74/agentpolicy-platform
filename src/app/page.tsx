@@ -14,9 +14,14 @@ function getLang(searchParams?: { lang?: string }): Lang {
   return raw === 'en' ? 'en' : 'ru';
 }
 
-export default function Home({ searchParams }: { searchParams?: { lang?: string } }) {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams?: Promise<{ lang?: string }>;
+}) {
   // Пока язык для SEO/метатегов не используем, но оставляем хелпер для будущего
-  getLang(searchParams);
+  const params = searchParams ? await searchParams : undefined;
+  getLang(params);
 
   return (
     <div className="flex min-h-screen flex-col">

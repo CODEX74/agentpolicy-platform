@@ -64,8 +64,13 @@ const copy = {
   },
 } satisfies Record<Lang, { title: string; intro: string; sections: { title: string; paragraphs: string[] }[] }>;
 
-export default function PrivacyPage({ searchParams }: { searchParams?: { lang?: string } }) {
-  const lang = getLang(searchParams);
+export default async function PrivacyPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ lang?: string }>;
+}) {
+  const params = searchParams ? await searchParams : undefined;
+  const lang = getLang(params);
   const t = copy[lang] ?? copy.ru;
 
   return (

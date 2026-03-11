@@ -10,13 +10,24 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) redirect('/');
 
-  const [user, hasOpenAiKey] = await Promise.all([
-    prisma.user.findUnique({
+  let user: { agents?: unknown[] } | null = null;
+  try {
+    const userRow = await prisma.user.findUnique({
       where: { email: session.user.email },
       include: { agents: { orderBy: { createdAt: 'desc' } } },
-    }),
-    getOpenAiKeyByEmail(session.user.email).then((k) => Boolean(k)),
-  ]);
+    });
+    user = userRow;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes('WITHIN GROUP is required for ordered-set aggregate mode')) {
+      console.error('[DashboardPage] prisma error suppressed for dashboard:', msg);
+      user = null;
+    } else {
+      throw e;
+    }
+  }
+
+  const hasOpenAiKey = await getOpenAiKeyByEmail(session.user.email).then((k) => Boolean(k));
   const agents = (user?.agents ?? []).map((a) => ({
     _id: a.id,
     name: a.name,

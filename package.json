@@ -6,6 +6,7 @@
     "dev": "next dev",
     "dev:webpack": "next dev --webpack",
     "build": "prisma generate && next build --webpack",
+    "postinstall": "patch-package",
     "start": "next start",
     "lint": "eslint",
     "cron": "node scripts/cron-runner.js",
@@ -54,6 +55,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "patch-package": "^8.0.1",
     "prisma": "^5.22.0",
     "tailwindcss": "^4",
     "typescript": "^5"

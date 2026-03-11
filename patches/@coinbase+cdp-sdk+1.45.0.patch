@@ -1,0 +1,51 @@
+diff --git a/node_modules/@coinbase/cdp-sdk/_cjs/auth/utils/jwt.js b/node_modules/@coinbase/cdp-sdk/_cjs/auth/utils/jwt.js
+index 1d0d08b..81d7399 100644
+--- a/node_modules/@coinbase/cdp-sdk/_cjs/auth/utils/jwt.js
++++ b/node_modules/@coinbase/cdp-sdk/_cjs/auth/utils/jwt.js
+@@ -5,7 +5,13 @@
+ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.generateJwt = generateJwt;
+ exports.generateWalletJwt = generateWalletJwt;
+-const jose_1 = require("jose");
++let joseModule = null;
++async function getJose() {
++    if (!joseModule) {
++        joseModule = await import("jose");
++    }
++    return joseModule;
++}
+ const uncrypto_1 = require("uncrypto");
+ const hash_js_1 = require("./hash.js");
+ const errors_js_1 = require("../../errors.js");
+@@ -73,6 +79,7 @@ async function generateJwt(options) {
+  * @throws {InvalidWalletSecretFormatError} If the private key is not in the correct format or signing fails.
+  */
+ async function generateWalletJwt(options) {
++    const jose_1 = await getJose();
+     if (!options.walletSecret) {
+         throw new errors_js_2.UndefinedWalletSecretError("Wallet Secret is not defined");
+     }
+@@ -129,6 +136,7 @@ function isValidEd25519Key(str) {
+  * @returns True if the string is a valid EC private key in PEM format
+  */
+ async function isValidECKey(str) {
++    const jose_1 = await getJose();
+     try {
+         // Try to import the key with jose - if it works, it's a valid EC key
+         await (0, jose_1.importPKCS8)(str, "ES256");
+@@ -151,6 +159,7 @@ async function isValidECKey(str) {
+  * @throws {Error} If key conversion, import, or signing fails
+  */
+ async function buildECJWT(privateKey, keyName, claims, now, expiresIn, nonce) {
++    const jose_1 = await getJose();
+     try {
+         // Import the key directly with jose
+         const ecKey = await (0, jose_1.importPKCS8)(privateKey, "ES256");
+@@ -179,6 +188,7 @@ async function buildECJWT(privateKey, keyName, claims, now, expiresIn, nonce) {
+  * @throws {Error} If key parsing, import, or signing fails
+  */
+ async function buildEdwardsJWT(privateKey, keyName, claims, now, expiresIn, nonce) {
++    const jose_1 = await getJose();
+     try {
+         // Decode the base64 key (expecting 64 bytes: 32 for seed + 32 for public key)
+         const decoded = Buffer.from(privateKey, "base64");

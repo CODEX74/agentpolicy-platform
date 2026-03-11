@@ -140,8 +140,13 @@ export async function POST(req: NextRequest) {
 
     let finalAgent = agent;
     if (data.mode === 'WALLET') {
-      const { createRealAgentWallet } = await import('@/lib/agents/realWallet');
-      finalAgent = await createRealAgentWallet(user.id, agent.id);
+      try {
+        const { createRealAgentWallet } = await import('@/lib/agents/realWallet');
+        finalAgent = await createRealAgentWallet(user.id, agent.id);
+      } catch (walletErr) {
+        console.error('createRealAgentWallet failed (agent created without real wallet)', walletErr);
+        // Агент уже создан; кошелёк можно создать позже через API или настройки
+      }
     }
 
     return NextResponse.json(toAgentResponse(finalAgent as unknown as Parameters<typeof toAgentResponse>[0]));

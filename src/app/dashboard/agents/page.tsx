@@ -35,7 +35,21 @@ export default async function AgentsPage() {
     }
   }
 
-  const agents = (user?.agents ?? []).map((a) => ({
+  type AgentRow = {
+    id: string;
+    name: string;
+    description: string | null;
+    isActive: boolean;
+    walletId: string | null;
+    walletAddress: string | null;
+    demoBalance: number | null;
+    initialDemoBalance: number | null;
+    run24_7: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+
+  const agents = ((user?.agents as AgentRow[] | undefined) ?? []).map((a) => ({
     _id: a.id,
     name: a.name,
     description: a.description ?? '',

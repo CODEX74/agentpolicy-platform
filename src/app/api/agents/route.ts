@@ -11,6 +11,7 @@ const createAgentSchema = z.object({
   description: z.string().max(1000).optional(),
   moltbookId: z.string().optional(),
   agentType: z.enum(['INVESTOR', 'TRADER']).optional(),
+  mode: z.enum(['DEMO', 'WALLET']).optional(),
 });
 
 function toAgentResponse(a: { id: string; userId: string; name: string; description: string | null; agentType: 'INVESTOR' | 'TRADER'; isActive: boolean; walletId: string | null; walletAddress: string | null; demoBalance: number | null; initialDemoBalance: number | null; run24_7: boolean; createdAt: Date; updatedAt: Date }) {

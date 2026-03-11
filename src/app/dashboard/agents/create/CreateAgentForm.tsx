@@ -15,6 +15,7 @@ const schema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(1000).optional(),
   agentType: z.enum(['INVESTOR', 'TRADER']),
+  mode: z.enum(['DEMO', 'WALLET']),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -29,6 +30,10 @@ const t = {
     investor: 'Инвестор (10+ дней)',
     trader: 'Трейдер (5–30 минут)',
     typeHint: 'Инвестор покупает на долгий срок. Трейдер ищет быстрые сделки и продаёт по цели.',
+    mode: 'Режим работы агента',
+    modeDemo: 'Демо-баланс',
+    modeWallet: 'Подключить свой кошелёк',
+    modeHint: 'В демо-режиме агент тратит виртуальный баланс. Подключение реального кошелька (CDP) доступно через API и интеграции.',
     error: 'Ошибка создания агента',
     creating: 'Создание...',
     submit: 'Создать',
@@ -42,6 +47,10 @@ const t = {
     investor: 'Investor (10+ days)',
     trader: 'Trader (5–30 min)',
     typeHint: 'Investor buys for the long term. Trader looks for quick trades and sells at target.',
+    mode: 'Agent mode',
+    modeDemo: 'Demo balance',
+    modeWallet: 'Connect your wallet',
+    modeHint: 'In demo mode the agent spends virtual balance. Connecting a real wallet (CDP) is available via API and integrations.',
     error: 'Failed to create agent',
     creating: 'Creating...',
     submit: 'Create',
@@ -55,7 +64,7 @@ export function CreateAgentForm() {
   const [error, setError] = useState<string | null>(null);
   const { register, handleSubmit, formState: { isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { agentType: 'INVESTOR' },
+    defaultValues: { agentType: 'INVESTOR', mode: 'DEMO' },
   });
 
   const onSubmit = async (data: FormData) => {
@@ -96,6 +105,31 @@ export function CreateAgentForm() {
             </select>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               {text.typeHint}
+            </p>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">{text.mode}</label>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  value="DEMO"
+                  {...register('mode')}
+                  defaultChecked
+                />
+                <span>{text.modeDemo}</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  value="WALLET"
+                  {...register('mode')}
+                />
+                <span>{text.modeWallet}</span>
+              </label>
+            </div>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              {text.modeHint}
             </p>
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}

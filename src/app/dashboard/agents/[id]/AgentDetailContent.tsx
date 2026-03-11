@@ -1,17 +1,21 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useLang, withLang } from '@/contexts/LanguageContext';
 import { PolicyBuilder } from '@/components/dashboard/PolicyBuilder';
-import { AgentWalletCard } from '@/components/dashboard/AgentWalletCard';
 import { AgentDemoCard } from '@/components/dashboard/AgentDemoCard';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 
 const t = {
   ru: {
     demoBalance: 'Демо-баланс',
     positions: 'Позиции',
     backToAgents: '← К списку агентов',
+    delete: 'Удалить агента',
+    deleteConfirm: 'Точно удалить агента? Это действие нельзя отменить.',
+    deleteError: 'Не удалось удалить агента. Попробуйте ещё раз.',
     nextSteps: 'Что дальше?',
     nextIntro: 'Политика задаёт лимиты и правила для этого агента. Дальше можно:',
     dashboard: 'Дашборд',
@@ -26,6 +30,9 @@ const t = {
     demoBalance: 'Demo balance',
     positions: 'Positions',
     backToAgents: '← Back to agents',
+    delete: 'Delete agent',
+    deleteConfirm: 'Are you sure you want to delete this agent? This action cannot be undone.',
+    deleteError: 'Failed to delete agent. Please try again.',
     nextSteps: 'What next?',
     nextIntro: 'Policy sets limits and rules for this agent. Next you can:',
     dashboard: 'Dashboard',
@@ -69,6 +76,25 @@ export function AgentDetailContent({
 }) {
   const lang = useLang();
   const text = t[lang];
+  const router = useRouter();
+
+  const handleDelete = async () => {
+    // eslint-disable-next-line no-alert
+    const ok = window.confirm(text.deleteConfirm);
+    if (!ok) return;
+    try {
+      const res = await fetch(`/api/agents/${agentId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        // eslint-disable-next-line no-alert
+        alert(text.deleteError);
+        return;
+      }
+      router.push(withLang('/dashboard/agents', lang));
+    } catch {
+      // eslint-disable-next-line no-alert
+      alert(text.deleteError);
+    }
+  };
 
   return (
     <div className="max-w-2xl space-y-8">
@@ -86,18 +112,23 @@ export function AgentDetailContent({
             </span>
           )}
         </div>
-        <Link
-          href={withLang('/dashboard/agents', lang)}
-          className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
-        >
-          {text.backToAgents}
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href={withLang('/dashboard/agents', lang)}
+            className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
+          >
+            {text.backToAgents}
+          </Link>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={handleDelete}
+          >
+            {text.delete}
+          </Button>
+        </div>
       </div>
-      <AgentWalletCard
-        agentId={agentId}
-        currentWalletId={agent.walletId ?? null}
-        currentWalletAddress={agent.walletAddress ?? null}
-      />
       <AgentDemoCard agentId={agentId} />
       <PolicyBuilder agentId={agentId} initialPolicy={initialPolicy} />
       <Card>

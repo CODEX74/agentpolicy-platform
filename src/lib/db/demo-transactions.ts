@@ -190,7 +190,8 @@ export async function getDemoSpentToday(agentId: string, userEmail: string): Pro
   if (!user) return 0;
 
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Считаем новый «день» с 00:05, чтобы лимиты обновлялись в 00:05.
+  today.setHours(0, 5, 0, 0);
 
   const rows = await prisma.demoTransaction.findMany({
     where: {

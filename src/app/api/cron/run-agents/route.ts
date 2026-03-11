@@ -104,17 +104,17 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
         agentType: agent.agentType as 'INVESTOR' | 'TRADER',
         demoBalanceEth: dailyLimit > 0 ? dailyLimit : 0,
         policy: {
-          dailyLimit: dailyLimit,
+          dailyLimit,
           weeklyLimit: -1,
           maxPerTransaction: maxPerTx,
-          allowedOperations: ['buy', 'sell'],
+          allowedOperations: ['buy', 'sell'] as string[],
         },
         spentTodayEth: spentToday,
         spentWeekEth: spentToday,
         ethPriceUsd: usdtPrice || 1,
         marketPrices,
         marketTrend,
-      } as const;
+      };
 
       const decisionResult = await getAgentTradeDecision(input);
       const decision = decisionResult.decision;

@@ -18,7 +18,7 @@
 ### 1. Установка
 
 ```bash
-cd AgentWallet-platform
+cd agentpolicy-platform
 npm install
 ```
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -67,30 +67,45 @@ export function CreateAgentForm() {
     defaultValues: { agentType: 'INVESTOR', mode: 'DEMO' },
   });
 
-  const onSubmit = async (data: FormData) => {
-    setError(null);
-    const res = await fetch('/api/agents', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    if (!res.ok) {
-      const payload = await res.json().catch(() => null);
-      const serverError =
-        payload && typeof payload.error === 'string'
-          ? payload.error
-          : text.error;
-      setError(serverError);
-      return;
-    }
-    const agent = await res.json();
-    router.push(withLang(`/dashboard/agents/${agent._id}`, lang));
-  };
+  const onSubmit = useCallback(
+    async (data: FormData) => {
+      setError(null);
+      const res = await fetch('/api/agents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null);
+        const serverError =
+          payload && typeof payload.error === 'string'
+            ? payload.error
+            : text.error;
+        setError(serverError);
+        return;
+      }
+      const agent = await res.json();
+      router.push(withLang(`/dashboard/agents/${agent._id}`, lang));
+    },
+    [router, lang, text.error]
+  );
+
+  const handleFormSubmit = useCallback(
+    (e: React.FormEvent<HTMLFormElement>) => {
+      const fn = typeof handleSubmit === 'function' ? handleSubmit(onSubmit) : null;
+      if (typeof fn === 'function') {
+        return fn(e);
+      }
+      e.preventDefault();
+      setError('Ошибка инициализации формы. Обновите страницу.');
+    },
+    [handleSubmit, onSubmit]
+  );
 
   return (
     <Card className="mt-6">
       <CardContent className="pt-6">
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleFormSubmit} className="space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium">{text.name}</label>
             <Input {...register('name')} placeholder={text.namePlaceholder} />

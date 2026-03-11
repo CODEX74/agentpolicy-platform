@@ -89,6 +89,7 @@ model Agent {
   demoBalance       Float?
   initialDemoBalance Float?
   // Real-wallet (custody) trading fields
+  realWalletId        String?  // CDP wallet id for API calls
   realWalletAddress   String?
   realWalletNetwork   String?  @default("base")
   realWalletAsset     String?  @default("USDC")

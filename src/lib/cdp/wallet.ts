@@ -1,4 +1,8 @@
-import { getCdpClient } from './client';
+/**
+ * Agent wallet creation and balance via CDP REST (no agentkit/cdp-sdk ESM).
+ */
+
+import * as rest from './rest';
 import { logger } from '@/lib/utils/logger';
 
 export interface CreateWalletResult {
@@ -8,33 +12,19 @@ export interface CreateWalletResult {
 
 export async function createAgentWallet(): Promise<CreateWalletResult> {
   try {
-    const agentKit = await getCdpClient();
-    const walletProvider = (agentKit as { getWalletProvider?: () => unknown }).getWalletProvider?.();
-
-    if (!walletProvider || typeof (walletProvider as { createWallet?: () => Promise<{ address: string }> }).createWallet !== 'function') {
-      throw new Error('Wallet provider does not support createWallet');
-    }
-
-    const wallet = await (walletProvider as { createWallet: () => Promise<{ address: string; id?: string }> }).createWallet();
-    return {
-      address: wallet.address,
-      walletId: wallet.id,
-    };
+    const networkId = process.env.NETWORK_ID ?? 'base-sepolia';
+    const { walletId, address } = await rest.createWallet(networkId);
+    return { address, walletId };
   } catch (err) {
     logger.error('createAgentWallet failed', err);
     throw err;
   }
 }
 
-export async function getWalletBalance(address: string): Promise<string> {
+export async function getWalletBalance(address: string, networkId?: string): Promise<string> {
   try {
-    const agentKit = await getCdpClient();
-    const walletProvider = (agentKit as { getWalletProvider?: () => unknown }).getWalletProvider?.();
-    if (!walletProvider || typeof (walletProvider as { getBalance?: (addr: string) => Promise<{ value: string }> }).getBalance !== 'function') {
-      return '0';
-    }
-    const balance = await (walletProvider as { getBalance: (addr: string) => Promise<{ value: string }> }).getBalance(address);
-    return balance?.value ?? '0';
+    const network = networkId ?? process.env.NETWORK_ID ?? 'base-sepolia';
+    return await rest.getBalanceByAddress(address, network);
   } catch (err) {
     logger.error('getWalletBalance failed', err);
     return '0';

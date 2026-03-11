@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     }
 
     const { getWalletBalance } = await import('@/lib/cdp/wallet');
-    const balance = await getWalletBalance(wallet.address);
+    const balance = await getWalletBalance(wallet.address, wallet.networkId);
     return NextResponse.json({ address: wallet.address, balance });
   } catch (err) {
     console.error('GET /api/wallets/balance', err);

@@ -20,11 +20,12 @@ export async function createRealAgentWallet(userId: string, agentId: string) {
     return agent;
   }
 
-  const { address } = await createAgentWallet();
+  const { address, walletId } = await createAgentWallet();
 
   const updated = await prisma.agent.update({
     where: { id: agentId },
     data: {
+      realWalletId: walletId ?? null,
       realWalletAddress: address,
       realWalletNetwork: process.env.NETWORK_ID ?? 'base-sepolia',
       realWalletAsset: 'USDC',
@@ -39,7 +40,8 @@ export async function getRealWalletBalance(agentId: string, userId: string) {
   if (!agent?.realWalletAddress) {
     return { address: agent?.realWalletAddress ?? null, balanceWei: '0' };
   }
-  const balanceWei = await getWalletBalance(agent.realWalletAddress);
+  const networkId = agent.realWalletNetwork ?? undefined;
+  const balanceWei = await getWalletBalance(agent.realWalletAddress, networkId);
   return { address: agent.realWalletAddress, balanceWei };
 }
 
@@ -58,10 +60,12 @@ export async function sendRealTrade(params: RealTradeParams) {
   const valueWei = BigInt(Math.floor(params.amountUsd * 1_000_000)).toString();
 
   try {
+    const networkId = agent.realWalletNetwork ?? 'base';
     const { txHash } = await sendTransaction({
       fromAddress: agent.realWalletAddress,
       toAddress: params.toAddress,
       valueWei,
+      networkId,
     });
 
     await prisma.realTransaction.create({

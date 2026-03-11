@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
       fromAddress: data.fromAddress,
       toAddress: data.toAddress,
       valueWei: data.valueWei,
+      networkId: wallet.networkId,
     });
 
     return NextResponse.json({ txHash: result.txHash });

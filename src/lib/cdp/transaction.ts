@@ -1,4 +1,8 @@
-import { getCdpClient } from './client';
+/**
+ * Send transaction via CDP REST (no agentkit/cdp-sdk ESM).
+ */
+
+import * as rest from './rest';
 import { logger } from '@/lib/utils/logger';
 
 export interface SendTransactionParams {
@@ -6,25 +10,19 @@ export interface SendTransactionParams {
   toAddress: string;
   valueWei: string;
   data?: string;
+  networkId?: string;
 }
 
 export async function sendTransaction(params: SendTransactionParams): Promise<{ txHash: string }> {
   try {
-    const agentKit = await getCdpClient();
-    const walletProvider = (agentKit as { getWalletProvider?: () => unknown }).getWalletProvider?.();
-
-    if (!walletProvider || typeof (walletProvider as { sendTransaction?: (params: unknown) => Promise<{ hash: string }> }).sendTransaction !== 'function') {
-      throw new Error('Wallet provider does not support sendTransaction');
-    }
-
-    const result = await (walletProvider as { sendTransaction: (params: unknown) => Promise<{ hash: string }> }).sendTransaction({
-      from: params.fromAddress,
-      to: params.toAddress,
-      value: BigInt(params.valueWei),
+    const networkId = params.networkId ?? process.env.NETWORK_ID ?? 'base-sepolia';
+    return await rest.sendTransaction({
+      networkId,
+      fromAddress: params.fromAddress,
+      toAddress: params.toAddress,
+      valueWei: params.valueWei,
       data: params.data,
     });
-
-    return { txHash: result.hash };
   } catch (err) {
     logger.error('sendTransaction failed', err);
     throw err;

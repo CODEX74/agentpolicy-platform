@@ -38,8 +38,13 @@ const copy: Record<
   },
 };
 
-export default function BlockedPage({ searchParams }: { searchParams?: { lang?: string } }) {
-  const lang = getLang(searchParams);
+export default async function BlockedPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ lang?: string }>;
+}) {
+  const params = await searchParams;
+  const lang = getLang(params);
   const t = copy[lang] ?? copy.ru;
 
   return (

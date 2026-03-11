@@ -95,9 +95,10 @@ export async function POST(req: NextRequest) {
     }
     const email = session.user.email;
     const openaiKey = await getOpenAiKeyByEmail(email);
-    if (!openaiKey) {
+    const hasEnvKey = Boolean(process.env.GROQ_API_KEY?.trim() || process.env.OPENAI_API_KEY?.trim());
+    if (!openaiKey && !hasEnvKey) {
       return NextResponse.json(
-        { error: 'Укажите OpenAI (ChatGPT) API key в Настройках, чтобы создавать агентов.' },
+        { error: 'Укажите OpenAI (ChatGPT) API key в Настройках или задайте GROQ_API_KEY/OPENAI_API_KEY в окружении, чтобы создавать агентов.' },
         { status: 403 }
       );
     }

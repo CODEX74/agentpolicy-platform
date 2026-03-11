@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import type { Resolver } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -19,6 +19,23 @@ const schema = z.object({
 });
 
 type FormData = z.infer<typeof schema>;
+
+function createZodResolver<T extends z.ZodType>(schema: T): Resolver<z.infer<T>> {
+  return async (values) => {
+    const result = schema.safeParse(values);
+    if (result.success) {
+      return { values: result.data, errors: {} };
+    }
+    const errors: Record<string, { message: string }> = {};
+    for (const issue of result.error.issues) {
+      const path = issue.path.join('.');
+      if (!errors[path]) {
+        errors[path] = { message: issue.message };
+      }
+    }
+    return { values: {}, errors };
+  };
+}
 
 const t = {
   ru: {
@@ -63,7 +80,7 @@ export function CreateAgentForm() {
   const text = t[lang as Lang];
   const [error, setError] = useState<string | null>(null);
   const { register, handleSubmit, formState: { isSubmitting } } = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: createZodResolver(schema),
     defaultValues: { agentType: 'INVESTOR', mode: 'DEMO' },
   });
 

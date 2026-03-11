@@ -22,7 +22,7 @@ function toAgentResponse(a: {
   name: string;
   description: string | null;
   agentType: 'INVESTOR' | 'TRADER';
-  mode: 'DEMO' | 'WALLET';
+  agentMode: 'DEMO' | 'WALLET';
   isActive: boolean;
   walletId: string | null;
   walletAddress: string | null;
@@ -44,7 +44,7 @@ function toAgentResponse(a: {
     name: a.name,
     description: a.description ?? '',
     agentType: a.agentType,
-    mode: a.mode,
+    mode: a.agentMode,
     isActive: a.isActive,
     walletId: a.walletId ?? undefined,
     walletAddress: a.walletAddress ?? undefined,
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
         name: data.name,
         description: data.description ?? '',
         agentType: data.agentType ?? 'INVESTOR',
-        mode: (data.mode ?? 'DEMO') as 'DEMO' | 'WALLET',
+        agentMode: (data.mode ?? 'DEMO') as 'DEMO' | 'WALLET',
       },
     });
 

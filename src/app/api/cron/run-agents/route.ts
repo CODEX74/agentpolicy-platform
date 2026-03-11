@@ -79,7 +79,7 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
 
   // Real-wallet agents (mode = WALLET, realTradingEnabled = true)
   const realAgents = await prisma.agent.findMany({
-    where: { run24_7: true, mode: 'WALLET', realTradingEnabled: true },
+    where: { run24_7: true, agentMode: 'WALLET', realTradingEnabled: true },
     include: { user: true },
   });
 

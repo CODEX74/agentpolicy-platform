@@ -21,7 +21,7 @@ function toAgentResponse(a: {
   name: string;
   description: string | null;
   agentType: 'INVESTOR' | 'TRADER';
-  mode: 'DEMO' | 'WALLET';
+  agentMode: 'DEMO' | 'WALLET';
   isActive: boolean;
   walletId: string | null;
   walletAddress: string | null;
@@ -40,7 +40,7 @@ function toAgentResponse(a: {
     name: a.name,
     description: a.description ?? '',
     agentType: a.agentType,
-    mode: a.mode,
+    mode: a.agentMode,
     isActive: a.isActive,
     walletId: a.walletId ?? undefined,
     walletAddress: a.walletAddress ?? undefined,
@@ -110,7 +110,7 @@ export async function PATCH(
         ...(data.description != null && { description: data.description }),
         ...(data.isActive != null && { isActive: data.isActive }),
         ...(data.agentType != null && { agentType: data.agentType }),
-        ...(data.mode != null && { mode: data.mode }),
+        ...(data.mode != null && { agentMode: data.mode }),
         ...(data.realTradingEnabled != null && { realTradingEnabled: data.realTradingEnabled }),
         ...(data.realMaxPositionUsd !== undefined && { realMaxPositionUsd: data.realMaxPositionUsd }),
         ...(data.realDailyLimitUsd !== undefined && { realDailyLimitUsd: data.realDailyLimitUsd }),

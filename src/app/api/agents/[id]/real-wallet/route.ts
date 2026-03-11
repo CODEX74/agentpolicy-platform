@@ -24,7 +24,7 @@ export async function GET(
     });
     if (!agent) return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
 
-    if (agent.mode !== 'WALLET') {
+    if (agent.agentMode !== 'WALLET') {
       return NextResponse.json({ error: 'Agent is not in WALLET mode' }, { status: 400 });
     }
 

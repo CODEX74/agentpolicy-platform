@@ -109,7 +109,7 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ id
           walletId: agentRow.walletId ?? null,
           walletAddress: agentRow.walletAddress ?? null,
           demoBalance: agentRow.demoBalance,
-          mode: agentRow.mode,
+          mode: agentRow.agentMode,
           realWalletAddress: agentRow.realWalletAddress,
         }}
         initialPolicy={initialPolicy}

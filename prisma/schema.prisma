@@ -82,7 +82,7 @@ model Agent {
   name              String
   description       String?
   agentType         AgentType @default(INVESTOR)
-  mode              AgentMode @default(DEMO)
+  agentMode         AgentMode @default(DEMO) @map("agent_mode")
   isActive          Boolean  @default(true)
   walletId          String?
   walletAddress     String?

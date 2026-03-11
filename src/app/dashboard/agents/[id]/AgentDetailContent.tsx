@@ -109,12 +109,12 @@ export function AgentDetailContent({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold">{agent.name}</h1>
-          {agent.demoBalance != null && agent.demoBalance >= 0 && (
+          {agent.mode === 'DEMO' && agent.demoBalance != null && agent.demoBalance >= 0 && (
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-medium text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
               {text.demoBalance}: {agent.demoBalance} USDT
             </span>
           )}
-          {demoPositions.length > 0 && (
+          {agent.mode === 'DEMO' && demoPositions.length > 0 && (
             <span className="rounded-full bg-zinc-100 px-3 py-1 text-sm text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
               {text.positions}: {demoPositions.map((p) => `${p.quantity < 0.01 ? p.quantity.toExponential(2) : p.quantity.toFixed(4)} ${p.asset} @ $${p.avgPriceUsd.toFixed(0)}`).join(', ')}
             </span>
@@ -137,7 +137,7 @@ export function AgentDetailContent({
           </Button>
         </div>
       </div>
-      <AgentDemoCard agentId={agentId} />
+      {agent.mode === 'DEMO' && <AgentDemoCard agentId={agentId} />}
       {agent.mode === 'WALLET' && <RealWalletCard agentId={agentId} />}
       <PolicyBuilder agentId={agentId} initialPolicy={initialPolicy} />
       <Card>

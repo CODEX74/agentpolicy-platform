@@ -5,6 +5,8 @@ const SERVER_EXTERNAL_PACKAGES = [
   '@noble/hashes',
   '@noble/curves',
   '@coinbase/agentkit',
+  '@coinbase/cdp-sdk',
+  'jose',
   'ox',
 ];
 

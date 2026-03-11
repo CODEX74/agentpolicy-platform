@@ -1,4 +1,4 @@
-import { AgentKit } from '@coinbase/agentkit';
+import type { AgentKit } from '@coinbase/agentkit';
 import { logger } from '@/lib/utils/logger';
 
 let agentKitInstance: AgentKit | null = null;
@@ -18,7 +18,8 @@ export async function getCdpClient(): Promise<AgentKit> {
   }
 
   try {
-    agentKitInstance = await AgentKit.from({
+    const { AgentKit: AgentKitClass } = await import('@coinbase/agentkit');
+    agentKitInstance = await AgentKitClass.from({
       cdpApiKeyId: apiKeyName,
       cdpApiKeySecret: apiKeyPrivateKey,
     });

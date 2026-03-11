@@ -267,7 +267,7 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
                 if (r.result.plans) parts.push(`Планы: ${r.result.plans}`);
               }
               const block = parts.join('\n');
-              return idx === userResults.length - 1 ? [block] : [block, ''];
+              return idx === grouped.demo.length - 1 ? [block] : [block, ''];
             }),
             ...(hasReal
               ? [

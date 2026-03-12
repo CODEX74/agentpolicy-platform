@@ -7,7 +7,7 @@ import { getTelegramIdByEmail } from '@/lib/db/user-telegram';
 import { formatAssetQuantity } from '@/lib/utils/format';
 import { getAgentTradeDecision, getMarketPrices, getUsdtPriceUsd } from '@/lib/ai/agent-trader';
 import { createWalletClient, http, type Address } from 'viem';
-import { base, baseSepolia } from 'viem/chains';
+import { base, baseSepolia, mainnet } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { decryptPrivateKey } from '@/lib/wallets/serverKey';
 
@@ -261,10 +261,17 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
                       rpcUrl: 'https://sepolia.base.org',
                       chain: baseSepolia,
                     }
-                  : {
-                      rpcUrl: process.env.BASE_RPC_URL ?? 'https://sepolia.base.org',
-                      chain: baseSepolia,
-                    };
+                  : walletNetworkId === 'ethereum-mainnet'
+                    ? {
+                        rpcUrl:
+                          process.env.ETHEREUM_RPC_URL ??
+                          'https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID',
+                        chain: mainnet,
+                      }
+                    : {
+                        rpcUrl: process.env.BASE_RPC_URL ?? 'https://sepolia.base.org',
+                        chain: baseSepolia,
+                      };
 
             const client = createWalletClient({
               account,

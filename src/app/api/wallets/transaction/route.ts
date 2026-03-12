@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db/prisma';
 import { z } from 'zod';
 import { createWalletClient, http, type Address } from 'viem';
-import { base, baseSepolia } from 'viem/chains';
+import { base, baseSepolia, mainnet } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { decryptPrivateKey } from '@/lib/wallets/serverKey';
 
@@ -63,10 +63,17 @@ export async function POST(req: NextRequest) {
                 rpcUrl: 'https://sepolia.base.org',
                 chain: baseSepolia,
               }
-            : {
-                rpcUrl: process.env.BASE_RPC_URL ?? 'https://sepolia.base.org',
-                chain: baseSepolia,
-              };
+            : networkId === 'ethereum-mainnet'
+              ? {
+                  rpcUrl:
+                    process.env.ETHEREUM_RPC_URL ??
+                    'https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID',
+                  chain: mainnet,
+                }
+              : {
+                  rpcUrl: process.env.BASE_RPC_URL ?? 'https://sepolia.base.org',
+                  chain: baseSepolia,
+                };
 
       const client = createWalletClient({
         account,

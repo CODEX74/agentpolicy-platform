@@ -169,7 +169,9 @@ export async function getBalanceByAddress(address: string, networkId: string): P
       ? 'https://mainnet.base.org'
       : networkId === 'base-sepolia'
         ? 'https://sepolia.base.org'
-        : process.env.BASE_RPC_URL ?? 'https://sepolia.base.org';
+        : networkId === 'ethereum-mainnet'
+          ? process.env.ETHEREUM_RPC_URL ?? 'https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID'
+          : process.env.BASE_RPC_URL ?? 'https://sepolia.base.org';
   try {
     const res = await fetch(rpcUrl, {
       method: 'POST',

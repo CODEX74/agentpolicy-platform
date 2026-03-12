@@ -43,45 +43,7 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let agents;
-  try {
-    agents = await prisma.agent.findMany({
-      where: { run24_7: true, demoBalance: { gt: 0 } },
-      include: { user: true },
-    });
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    if (msg.includes('WITHIN GROUP is required for ordered-set aggregate mode')) {
-      console.error('[cron run-agents] prisma.agent.findMany failed, skipping run:', msg);
-      return NextResponse.json({
-        ok: true,
-        ran: 0,
-        results: [],
-        realResults: [],
-        telegramByUser: {},
-        hintEmpty:
-          'Ошибка подключения к базе данных (WITHIN GROUP). Крон пропущен, проверьте версию Postgres.',
-      });
-    }
-    throw e;
-  }
-  const results: {
-    agentId: string;
-    agentName: string;
-    userEmail: string;
-    result: RunAgentResult;
-    positions: DemoPosition[];
-  }[] = [];
-
-  for (const agent of agents) {
-    const userEmail = agent.user.email;
-    if (!userEmail) continue;
-    const result = await runAgentOnce(agent.id, userEmail);
-    const positions = await getDemoPositions(agent.id, userEmail);
-    results.push({ agentId: agent.id, agentName: agent.name, userEmail, result, positions });
-  }
-
-  // Real-wallet agents (mode = WALLET, realTradingEnabled = true)
+  // Сначала обрабатываем real-агентов, чтобы их запросы к ИИ шли первыми.
   const realAgents = await prisma.agent.findMany({
     where: { run24_7: true, agentMode: 'WALLET', realTradingEnabled: true },
     include: { user: true },
@@ -347,6 +309,45 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
         }
       }
     }
+  }
+
+  // Затем обрабатываем демо-агентов (они менее критичны по приоритету запросов к ИИ).
+  let agents;
+  try {
+    agents = await prisma.agent.findMany({
+      where: { run24_7: true, demoBalance: { gt: 0 } },
+      include: { user: true },
+    });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes('WITHIN GROUP is required for ordered-set aggregate mode')) {
+      console.error('[cron run-agents] prisma.agent.findMany failed, skipping run:', msg);
+      return NextResponse.json({
+        ok: true,
+        ran: 0,
+        results: [],
+        realResults,
+        telegramByUser: {},
+        hintEmpty:
+          'Ошибка подключения к базе данных (WITHIN GROUP). Крон пропущен, проверьте версию Postgres.',
+      });
+    }
+    throw e;
+  }
+  const results: {
+    agentId: string;
+    agentName: string;
+    userEmail: string;
+    result: RunAgentResult;
+    positions: DemoPosition[];
+  }[] = [];
+
+  for (const agent of agents) {
+    const userEmail = agent.user.email;
+    if (!userEmail) continue;
+    const result = await runAgentOnce(agent.id, userEmail);
+    const positions = await getDemoPositions(agent.id, userEmail);
+    results.push({ agentId: agent.id, agentName: agent.name, userEmail, result, positions });
   }
 
   const resultsForJson = results.map((r) => ({

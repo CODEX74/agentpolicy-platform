@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useLang, withLang } from '@/contexts/LanguageContext';
 import { TransactionTable } from '@/components/dashboard/TransactionTable';
@@ -69,24 +70,40 @@ export function TransactionsPageContent({
   const lang = useLang();
   const text = t[lang];
   const codeClass = 'rounded bg-zinc-200 px-1 dark:bg-zinc-700';
+  const [mode, setMode] = useState<'demo' | 'real'>('demo');
 
   return (
     <>
       <h1 className="text-2xl font-bold">{text.title}</h1>
-      <div className="mt-6 space-y-8">
-        <section>
-          <h2 className="text-lg font-semibold">{text.demoTitle}</h2>
-          <div className="mt-3">
-            <TransactionTable transactions={demoTransactions} />
-          </div>
-        </section>
+      <div className="mt-4 inline-flex rounded-lg border border-zinc-200 bg-zinc-100 p-1 text-xs dark:border-zinc-800 dark:bg-zinc-900">
+        <button
+          type="button"
+          onClick={() => setMode('demo')}
+          className={`rounded-md px-3 py-1 transition ${
+            mode === 'demo'
+              ? 'bg-white text-zinc-900 shadow dark:bg-zinc-800 dark:text-zinc-50'
+              : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
+          }`}
+        >
+          {text.demoTitle}
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('real')}
+          className={`ml-1 rounded-md px-3 py-1 transition ${
+            mode === 'real'
+              ? 'bg-white text-zinc-900 shadow dark:bg-zinc-800 dark:text-zinc-50'
+              : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
+          }`}
+        >
+          {text.realTitle}
+        </button>
+      </div>
 
-        <section>
-          <h2 className="text-lg font-semibold">{text.realTitle}</h2>
-          <div className="mt-3">
-            <TransactionTable transactions={realTransactions} />
-          </div>
-        </section>
+      <div className="mt-6">
+        <TransactionTable
+          transactions={mode === 'demo' ? demoTransactions : realTransactions}
+        />
       </div>
       {demoTransactions.length === 0 && realTransactions.length === 0 && (
         <Card className="mt-6">

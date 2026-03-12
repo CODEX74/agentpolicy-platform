@@ -1,5 +1,6 @@
 import { getDemoTransactionsByEmail } from '@/lib/db/demo-transactions';
 import { prisma } from '@/lib/db/prisma';
+import { getMarketPrices, getUsdtPriceUsd } from '@/lib/ai/agent-trader';
 
 export interface UnifiedTransaction {
   _id: string;
@@ -67,23 +68,33 @@ export async function getRealTransactionsForEmail(
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   if (!user) return [];
 
-  const rows = await prisma.realTransaction.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: 'desc' },
-    take: limit,
-  });
+  const [rows, marketPrices, usdtPrice] = await Promise.all([
+    prisma.realTransaction.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    }),
+    getMarketPrices(),
+    getUsdtPriceUsd(),
+  ]);
 
-  const mapped: UnifiedTransaction[] = rows.map((t) => ({
-    _id: t.id,
-    type: t.side === 'sell' ? 'sell_coin' : 'buy_coin',
-    amount: t.amountUsd,
-    currency: 'USDT',
-    toAddress: t.walletAddress,
-    status: 'real',
-    createdAt: t.createdAt.toISOString(),
-    isDemo: false,
-    asset: t.asset,
-  }));
+  const ethPriceUsd = marketPrices.ETH ?? usdtPrice ?? 1;
+
+  const mapped: UnifiedTransaction[] = rows.map((t) => {
+    const amountEth =
+      ethPriceUsd && Number.isFinite(ethPriceUsd) ? t.amountUsd / ethPriceUsd : t.amountUsd;
+    return {
+      _id: t.id,
+      type: t.side === 'sell' ? 'sell_coin' : 'buy_coin',
+      amount: amountEth,
+      currency: 'ETH',
+      toAddress: t.walletAddress,
+      status: 'real',
+      createdAt: t.createdAt.toISOString(),
+      isDemo: false,
+      asset: t.asset,
+    };
+  });
 
   return mapped;
 }

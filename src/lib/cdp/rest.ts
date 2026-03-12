@@ -103,11 +103,13 @@ export interface CreateWalletResult {
 
 /**
  * Create a new CDP server wallet via REST API.
+ * JWT uri claim must use full path including /platform (per CDP docs).
  */
 export async function createWallet(networkId: string): Promise<CreateWalletResult> {
-  const path = '/v1/wallets';
-  const token = generateCdpJwt('POST', path);
-  const res = await fetch(`${CDP_BASE}${path}`, {
+  const pathForJwt = '/platform/v1/wallets';
+  const pathForUrl = '/v1/wallets';
+  const token = generateCdpJwt('POST', pathForJwt);
+  const res = await fetch(`${CDP_BASE}${pathForUrl}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -174,8 +176,9 @@ export async function sendTransaction(params: {
   valueWei: string;
   data?: string;
 }): Promise<{ txHash: string }> {
-  const path = `/v2/evm/accounts/${encodeURIComponent(params.fromAddress)}/send/transaction`;
-  const token = generateCdpJwt('POST', path);
+  const pathForUrl = `/v2/evm/accounts/${encodeURIComponent(params.fromAddress)}/send/transaction`;
+  const pathForJwt = `/platform${pathForUrl}`;
+  const token = generateCdpJwt('POST', pathForJwt);
   const body: { network: string; transaction: Record<string, unknown> } = {
     network: params.networkId,
     transaction: {
@@ -184,7 +187,7 @@ export async function sendTransaction(params: {
     },
   };
   if (params.data) body.transaction.data = params.data;
-  const res = await fetch(`${CDP_BASE}${path}`, {
+  const res = await fetch(`${CDP_BASE}${pathForUrl}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

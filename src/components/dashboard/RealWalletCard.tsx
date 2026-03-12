@@ -326,14 +326,6 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
                   {text.autoLimits}
                 </Button>
               </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium">{text.notesLabel}</label>
-                <textarea
-                  className="min-h-[60px] w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-slate-400 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-50"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                />
-              </div>
               <div
                 className={`mt-2 space-y-1 rounded-md p-3 text-xs dark:bg-amber-900/20 dark:text-amber-100 ${
                   info.isViewOnly

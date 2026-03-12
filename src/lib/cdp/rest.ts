@@ -27,6 +27,12 @@ function isPemKey(secret: string): boolean {
   return secret.includes('-----BEGIN');
 }
 
+/** Base64url encode (no padding). */
+function base64url(b: Buffer | string): string {
+  const buf = typeof b === 'string' ? Buffer.from(b, 'utf8') : b;
+  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
 /** Build Ed25519 PKCS8 DER from 64-byte raw key (32 seed + 32 public); we only need the 32-byte seed. */
 function ed25519Pkcs8FromBase64(secret: string): Buffer {
   const raw = Buffer.from(secret, 'base64');
@@ -37,6 +43,21 @@ function ed25519Pkcs8FromBase64(secret: string): Buffer {
   // PKCS8 DER for Ed25519: prefix (0x30 0x2e ... 0x20) + 32-byte private key
   const prefix = Buffer.from('302e020100300506032b657004220420', 'hex');
   return Buffer.concat([prefix, seed]);
+}
+
+/** Build and sign a JWT with Ed25519 (EdDSA). jsonwebtoken does not support EdDSA at runtime. */
+function signJwtEd25519(
+  payload: Record<string, unknown>,
+  keyObject: crypto.KeyObject,
+  kid: string,
+  jti: string
+): string {
+  const header = { alg: 'EdDSA', kid, typ: 'JWT', nonce: jti };
+  const headerB64 = base64url(JSON.stringify(header));
+  const payloadB64 = base64url(JSON.stringify(payload));
+  const signingInput = `${headerB64}.${payloadB64}`;
+  const sig = crypto.sign(null, Buffer.from(signingInput, 'utf8'), keyObject);
+  return `${signingInput}.${base64url(sig)}`;
 }
 
 /**
@@ -69,15 +90,10 @@ function generateCdpJwt(method: string, path: string): string {
     return token;
   }
 
-  // Ed25519 key (base64): convert to PKCS8 and sign with EdDSA (Node + jsonwebtoken support at runtime)
+  // Ed25519 key (base64): jsonwebtoken does not support EdDSA at runtime — sign JWT manually with Node crypto
   const pkcs8 = ed25519Pkcs8FromBase64(secret);
   const keyObject = crypto.createPrivateKey({ key: pkcs8, format: 'der', type: 'pkcs8' });
-  const opts = {
-    algorithm: 'EdDSA' as const,
-    header: { alg: 'EdDSA', kid: name, typ: 'JWT', nonce: jti } as unknown as jwt.JwtHeader,
-  };
-  const token = jwt.sign(payload, keyObject as jwt.Secret, opts as unknown as jwt.SignOptions);
-  return token;
+  return signJwtEd25519(payload, keyObject, name, jti);
 }
 
 export interface CreateWalletResult {

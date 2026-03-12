@@ -290,7 +290,7 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
               <div>
                 <Button
                   type="button"
-                  size="xs"
+                  size="sm"
                   variant="outline"
                   disabled={!info || !info.balanceWei}
                   onClick={handleAutoLimits}

@@ -248,13 +248,16 @@ export async function getAgentTradeDecision(
   }
 
   try {
-    const { object } = await generateObject({
+    const { text } = await generateText({
       model: openai('gpt-4o-mini'),
-      schema: decisionSchema,
       prompt,
     });
-
-    return { decision: object };
+    const decision = parseDecisionJson(text);
+    if (decision) return { decision };
+    return {
+      decision: null,
+      error: 'OpenAI вернул невалидный JSON для решения. Попробуйте ещё раз позже.',
+    };
   } catch (e) {
     logger.error('getAgentTradeDecision', e);
     const err = e as { message?: string; status?: number; cause?: { message?: string } };

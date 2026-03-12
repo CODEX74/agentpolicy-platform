@@ -6,12 +6,14 @@ import type { Lang } from '@/contexts/LanguageContext';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PendingRealTransactions } from './PendingRealTransactions';
 
 type RealWalletInfo = {
   address: string | null;
   balanceWei: string;
   network: string | null;
   asset: string | null;
+  isViewOnly: boolean;
   realTradingEnabled: boolean;
   realMaxPositionUsd: number | null;
   realDailyLimitUsd: number | null;
@@ -27,6 +29,8 @@ const t = {
     copy: 'Скопировать',
     copied: 'Скопировано',
     notCreated: 'Кошелёк ещё не создан. Он создаётся автоматически при создании агента в режиме «Подключить свой кошелёк».',
+    viewOnlyNotice:
+      'Подключённый кошелёк: агент создаёт заявки на сделки, исполнение — по вашей подписи в кошельке (MetaMask и т.п.) в блоке ниже.',
     tradingTitle: 'Автотрейдинг реальными средствами',
     enableLabel: 'Включить торговлю реальными средствами',
     maxPosition: 'Максимальная позиция на один актив, USDC',
@@ -51,6 +55,8 @@ const t = {
     copied: 'Copied',
     notCreated:
       'Wallet is not created yet. It is created automatically when the agent is created in “Connect your wallet” mode.',
+    viewOnlyNotice:
+      'Connected wallet: the agent creates trade requests; execution requires your signature in the wallet (MetaMask etc.) in the section below.',
     tradingTitle: 'Autotrading with real funds',
     enableLabel: 'Enable trading with real funds',
     maxPosition: 'Max position per asset, USDC',
@@ -98,6 +104,7 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
           balanceWei: string;
           network: string | null;
           asset: string | null;
+          isViewOnly?: boolean;
           realTradingEnabled: boolean;
           realMaxPositionUsd: number | null;
           realDailyLimitUsd: number | null;
@@ -109,6 +116,7 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
           balanceWei: data.balanceWei,
           network: data.network,
           asset: data.asset,
+          isViewOnly: data.isViewOnly ?? false,
           realTradingEnabled: data.realTradingEnabled,
           realMaxPositionUsd: data.realMaxPositionUsd,
           realDailyLimitUsd: data.realDailyLimitUsd,
@@ -210,6 +218,16 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
                 <p className="text-xs text-zinc-700 dark:text-zinc-300">{info.balanceWei}</p>
               </div>
             </div>
+            {info.isViewOnly && (
+              <>
+                <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-100">
+                  {text.viewOnlyNotice}
+                </div>
+                <div className="border-t border-zinc-200 pt-4 dark:border-zinc-800">
+                  <PendingRealTransactions agentId={agentId} />
+                </div>
+              </>
+            )}
             <div className="mt-4 space-y-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
               <h4 className="text-sm font-semibold">{text.tradingTitle}</h4>
               <label className="flex items-start gap-2 text-xs">
@@ -246,7 +264,13 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
                   onChange={(e) => setNotes(e.target.value)}
                 />
               </div>
-              <div className="mt-2 space-y-1 rounded-md bg-amber-50 p-3 text-xs text-amber-900 dark:bg-amber-900/20 dark:text-amber-100">
+              <div
+                className={`mt-2 space-y-1 rounded-md p-3 text-xs dark:bg-amber-900/20 dark:text-amber-100 ${
+                  info.isViewOnly
+                    ? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                    : 'bg-amber-50 text-amber-900'
+                }`}
+              >
                 <div className="font-semibold">{text.riskTitle}</div>
                 <p>{text.riskText}</p>
                 <label className="mt-1 flex items-start gap-2">

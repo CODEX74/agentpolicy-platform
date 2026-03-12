@@ -40,12 +40,15 @@ export async function GET(
       // Возвращаем 200 с данными агента без баланса, чтобы карточка показала «Кошелёк ещё не создан» или адрес
     }
 
+    const isViewOnly = Boolean(address && !agent.realWalletId);
+
     return NextResponse.json({
       agentId: agent.id,
       address,
       balanceWei,
       network: agent.realWalletNetwork ?? null,
       asset: agent.realWalletAsset ?? 'USDC',
+      isViewOnly,
       realTradingEnabled: agent.realTradingEnabled,
       realMaxPositionUsd: agent.realMaxPositionUsd,
       realDailyLimitUsd: agent.realDailyLimitUsd,

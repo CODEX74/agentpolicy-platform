@@ -176,29 +176,61 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
         continue;
       }
 
-      // MVP: фиксируем решение в базе как RealTransaction без реальной on-chain транзакции.
-      await prisma.realTransaction.create({
-        data: {
-          agentId: agent.id,
-          userId: agent.user.id,
-          txHash: 'virtual',
-          asset: decision.asset ?? 'USDC',
-          amountUsd: amount,
-          side: 'buy',
-          network: agent.realWalletNetwork ?? 'base',
-          walletAddress: agent.realWalletAddress,
-        },
-      });
+      const isConnectedWallet = !agent.realWalletId;
+      const networkId = agent.realWalletNetwork ?? 'base-sepolia';
+      const valueWei = String(BigInt(Math.floor(amount * 1_000_000))); // USDC 6 decimals
+      const toAddress =
+        process.env.REAL_TRADE_RECIPIENT || '0x0000000000000000000000000000000000000000';
 
-      realResults.push({
-        agentId: agent.id,
-        agentName: agent.name,
-        userEmail,
-        action: 'buy_coin',
-        reason: decision.reason,
-        asset: decision.asset,
-        amountUsd: amount,
-      });
+      if (isConnectedWallet) {
+        // Подключённый кошелёк: создаём ожидающую транзакцию; пользователь подпишет в браузере.
+        await prisma.pendingRealTransaction.create({
+          data: {
+            agentId: agent.id,
+            userId: agent.user.id,
+            fromAddress: agent.realWalletAddress,
+            toAddress,
+            valueWei,
+            networkId,
+            asset: decision.asset ?? 'USDC',
+            amountUsd: amount,
+            reason: decision.reason ?? undefined,
+            status: 'pending',
+          },
+        });
+        realResults.push({
+          agentId: agent.id,
+          agentName: agent.name,
+          userEmail,
+          action: 'buy_coin_pending',
+          reason: decision.reason,
+          asset: decision.asset,
+          amountUsd: amount,
+        });
+      } else {
+        // Кошелёк создан в приложении (CDP): MVP — фиксируем как виртуальную сделку (реальную отправку можно добавить позже).
+        await prisma.realTransaction.create({
+          data: {
+            agentId: agent.id,
+            userId: agent.user.id,
+            txHash: 'virtual',
+            asset: decision.asset ?? 'USDC',
+            amountUsd: amount,
+            side: 'buy',
+            network: agent.realWalletNetwork ?? 'base',
+            walletAddress: agent.realWalletAddress,
+          },
+        });
+        realResults.push({
+          agentId: agent.id,
+          agentName: agent.name,
+          userEmail,
+          action: 'buy_coin',
+          reason: decision.reason,
+          asset: decision.asset,
+          amountUsd: amount,
+        });
+      }
     }
   }
 

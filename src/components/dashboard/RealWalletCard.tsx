@@ -20,12 +20,21 @@ type RealWalletInfo = {
   realNotes: string | null;
 };
 
+function formatEthFromWei(balanceWei: string): string {
+  if (!balanceWei) return '0';
+  const asNumber = Number(balanceWei);
+  if (!Number.isFinite(asNumber)) return '0';
+  const eth = asNumber / 1e18;
+  // До 6 знаков, без хвостовых нулей
+  return eth.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
+}
+
 const t = {
   ru: {
     title: 'Реальный кошелёк агента',
     addressLabel: 'Адрес кошелька',
     networkLabel: 'Сеть',
-    balanceLabel: 'Баланс (on-chain, raw wei)',
+    balanceLabel: 'Баланс (on-chain, wei / ETH)',
     copy: 'Скопировать',
     copied: 'Скопировано',
     notCreated: 'Кошелёк ещё не создан. Он создаётся автоматически при создании агента в режиме «Подключить свой кошелёк».',
@@ -45,12 +54,13 @@ const t = {
     riskText:
       'Я понимаю, что агент будет совершать реальные сделки с этим кошельком в автоматическом режиме в пределах указанных лимитов.',
     riskConfirm: 'Я понимаю риск и соглашаюсь с автоматической торговлей.',
+    autoLimits: 'Подобрать лимиты по текущему балансу',
   },
   en: {
     title: 'Agent real wallet',
     addressLabel: 'Wallet address',
     networkLabel: 'Network',
-    balanceLabel: 'Balance (on-chain, raw wei)',
+    balanceLabel: 'Balance (on-chain, wei / ETH)',
     copy: 'Copy',
     copied: 'Copied',
     notCreated:
@@ -71,6 +81,7 @@ const t = {
     riskText:
       'I understand that the agent will execute real trades from this wallet automatically within the configured limits.',
     riskConfirm: 'I understand the risk and agree to automatic trading.',
+    autoLimits: 'Auto-set limits from current balance',
   },
 };
 
@@ -180,6 +191,18 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
     }
   };
 
+  const handleAutoLimits = () => {
+    if (!info) return;
+    const formattedEth = formatEthFromWei(info.balanceWei);
+    const eth = Number(formattedEth);
+    if (!Number.isFinite(eth) || eth <= 0) return;
+    // Консервативные значения: до 50% на сделку и до 80% в день.
+    const suggestedMax = (eth * 0.5).toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+    const suggestedDaily = (eth * 0.8).toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+    setMaxPosition(suggestedMax);
+    setDailyLimit(suggestedDaily);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -215,7 +238,15 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide">{text.balanceLabel}</p>
-                <p className="text-xs text-zinc-700 dark:text-zinc-300">{info.balanceWei}</p>
+                <p className="text-xs text-zinc-700 dark:text-zinc-300">
+                  {info.balanceWei}
+                  {info.network === 'ethereum-mainnet' && (
+                    <>
+                      {' '}
+                      ({formatEthFromWei(info.balanceWei)} ETH)
+                    </>
+                  )}
+                </p>
               </div>
             </div>
             {info.isViewOnly && (
@@ -255,6 +286,17 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
                     placeholder="500"
                   />
                 </div>
+              </div>
+              <div>
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="outline"
+                  disabled={!info || !info.balanceWei}
+                  onClick={handleAutoLimits}
+                >
+                  {text.autoLimits}
+                </Button>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium">{text.notesLabel}</label>

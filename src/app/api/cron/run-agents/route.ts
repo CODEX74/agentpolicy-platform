@@ -181,6 +181,7 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
       }
 
       const isConnectedWallet = !agent.realWalletId;
+      const networkId = agent.realWalletNetwork ?? 'base-sepolia';
       const valueWei = String(BigInt(Math.floor(amount * 1_000_000))); // USDC 6 decimals
       const toAddress =
         process.env.REAL_TRADE_RECIPIENT || '0x0000000000000000000000000000000000000000';

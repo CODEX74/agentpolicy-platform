@@ -11,9 +11,13 @@ const CDP_BASE = 'https://api.cdp.coinbase.com/platform';
 
 function getCdpEnv() {
   const name = process.env.CDP_API_KEY_NAME;
-  const secret = process.env.CDP_API_KEY_PRIVATE_KEY;
+  let secret = process.env.CDP_API_KEY_PRIVATE_KEY;
   if (!name || !secret?.trim()) {
     throw new Error('CDP_API_KEY_NAME and CDP_API_KEY_PRIVATE_KEY must be set in environment');
+  }
+  // In env vars PEM is often stored with literal \n — restore real newlines for jwt
+  if (secret.includes('-----') && secret.includes('\\n')) {
+    secret = secret.replace(/\\n/g, '\n');
   }
   return { name, secret };
 }

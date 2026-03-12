@@ -233,7 +233,11 @@ export async function getAgentTradeDecision(
         lastError = raw ? (raw.length > 200 ? raw.slice(0, 200) + '…' : raw) : 'Неверный или истёкший ключ. Зайдите на console.groq.com → API Keys, создайте ключ и вставьте в .env.local: GROQ_API_KEY=gsk_...';
       }
     }
-    return { decision: null, error: `Groq: ${lastError}` };
+    // Если Groq не справился, но есть OpenAI-ключ, пробуем OpenAI как резерв.
+    if (!openaiKey) {
+      return { decision: null, error: `Groq: ${lastError}` };
+    }
+    // Иначе просто продолжаем ниже к OpenAI-блоку.
   }
 
   if (!openaiKey) {

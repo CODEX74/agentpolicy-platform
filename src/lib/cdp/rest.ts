@@ -9,7 +9,7 @@ import { logger } from '@/lib/utils/logger';
 
 const CDP_BASE = 'https://api.cdp.coinbase.com/platform';
 
-function getCdpEnv() {
+function getCdpEnv(): { name: string; secret: string } {
   const name = process.env.CDP_API_KEY_NAME;
   let secret = process.env.CDP_API_KEY_PRIVATE_KEY;
   if (!name || !secret?.trim()) {
@@ -19,12 +19,29 @@ function getCdpEnv() {
   if (secret.includes('-----') && secret.includes('\\n')) {
     secret = secret.replace(/\\n/g, '\n');
   }
-  return { name, secret };
+  return { name, secret: secret.trim() };
+}
+
+/** Detect if secret is PEM (EC key); otherwise assume Ed25519 base64. */
+function isPemKey(secret: string): boolean {
+  return secret.includes('-----BEGIN');
+}
+
+/** Build Ed25519 PKCS8 DER from 64-byte raw key (32 seed + 32 public); we only need the 32-byte seed. */
+function ed25519Pkcs8FromBase64(secret: string): Buffer {
+  const raw = Buffer.from(secret, 'base64');
+  if (raw.length < 32) {
+    throw new Error('CDP_API_KEY_PRIVATE_KEY: Ed25519 key must be at least 32 bytes when base64-decoded');
+  }
+  const seed = raw.subarray(0, 32);
+  // PKCS8 DER for Ed25519: prefix (0x30 0x2e ... 0x20) + 32-byte private key
+  const prefix = Buffer.from('302e020100300506032b657004220420', 'hex');
+  return Buffer.concat([prefix, seed]);
 }
 
 /**
  * Generate a CDP API JWT for the given REST request (method + path).
- * Supports EC (ES256) PEM keys only.
+ * Supports EC (ES256) PEM keys and Ed25519 (EdDSA) base64 keys.
  */
 function generateCdpJwt(method: string, path: string): string {
   const { name, secret } = getCdpEnv();
@@ -43,10 +60,23 @@ function generateCdpJwt(method: string, path: string): string {
     exp,
     jti,
   };
-  const token = jwt.sign(payload, secret, {
-    algorithm: 'ES256',
-    header: { alg: 'ES256', kid: name, typ: 'JWT', nonce: jti } as unknown as jwt.JwtHeader,
-  });
+
+  if (isPemKey(secret)) {
+    const token = jwt.sign(payload, secret, {
+      algorithm: 'ES256',
+      header: { alg: 'ES256', kid: name, typ: 'JWT', nonce: jti } as unknown as jwt.JwtHeader,
+    });
+    return token;
+  }
+
+  // Ed25519 key (base64): convert to PKCS8 and sign with EdDSA (Node + jsonwebtoken support at runtime)
+  const pkcs8 = ed25519Pkcs8FromBase64(secret);
+  const keyObject = crypto.createPrivateKey({ key: pkcs8, format: 'der', type: 'pkcs8' });
+  const opts = {
+    algorithm: 'EdDSA' as const,
+    header: { alg: 'EdDSA', kid: name, typ: 'JWT', nonce: jti } as unknown as jwt.JwtHeader,
+  };
+  const token = jwt.sign(payload, keyObject as jwt.Secret, opts as unknown as jwt.SignOptions);
   return token;
 }
 

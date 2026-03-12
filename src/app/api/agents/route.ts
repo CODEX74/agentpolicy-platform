@@ -8,12 +8,18 @@ import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
 
+const ethAddressRegex = /^0x[a-fA-F0-9]{40}$/;
+
 const createAgentSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(1000).optional(),
   moltbookId: z.string().optional(),
   agentType: z.enum(['INVESTOR', 'TRADER']).optional(),
   mode: z.enum(['DEMO', 'WALLET']).optional(),
+  realWalletAddress: z
+    .string()
+    .optional()
+    .refine((v) => !v || ethAddressRegex.test(v.trim()), { message: 'Invalid EVM address' }),
 });
 
 function toAgentResponse(a: {
@@ -140,12 +146,23 @@ export async function POST(req: NextRequest) {
 
     let finalAgent = agent;
     if (data.mode === 'WALLET') {
-      try {
-        const { createRealAgentWallet } = await import('@/lib/agents/realWallet');
-        finalAgent = await createRealAgentWallet(user.id, agent.id);
-      } catch (walletErr) {
-        console.error('createRealAgentWallet failed (agent created without real wallet)', walletErr);
-        // Агент уже создан; кошелёк можно создать позже через API или настройки
+      const existingAddress = data.realWalletAddress?.trim();
+      if (existingAddress && ethAddressRegex.test(existingAddress)) {
+        finalAgent = await prisma.agent.update({
+          where: { id: agent.id },
+          data: {
+            realWalletAddress: existingAddress.toLowerCase(),
+            realWalletNetwork: process.env.NETWORK_ID ?? 'base-sepolia',
+            realWalletAsset: 'USDC',
+          },
+        });
+      } else {
+        try {
+          const { createRealAgentWallet } = await import('@/lib/agents/realWallet');
+          finalAgent = await createRealAgentWallet(user.id, agent.id);
+        } catch (walletErr) {
+          console.error('createRealAgentWallet failed (agent created without real wallet)', walletErr);
+        }
       }
     }
 

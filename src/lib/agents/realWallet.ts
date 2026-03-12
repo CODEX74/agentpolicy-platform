@@ -55,6 +55,9 @@ export async function sendRealTrade(params: RealTradeParams) {
   if (!agent.realTradingEnabled || !agent.realWalletAddress) {
     throw new Error('Real trading is disabled or wallet not configured');
   }
+  if (!agent.realWalletId) {
+    throw new Error('This agent uses a connected wallet (view-only). Sending is only available for wallets created by the app.');
+  }
 
   // TODO: конвертацию amountUsd -> valueWei пока оставляем простой заглушкой (1 USDC ~ 1e6 единиц).
   const valueWei = BigInt(Math.floor(params.amountUsd * 1_000_000)).toString();

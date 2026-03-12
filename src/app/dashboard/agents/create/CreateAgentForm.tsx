@@ -30,8 +30,14 @@ const t = {
     typeHint: 'Инвестор покупает на долгий срок. Трейдер ищет быстрые сделки и продаёт по цели.',
     mode: 'Режим работы агента',
     modeDemo: 'Демо-баланс',
-    modeWallet: 'Подключить свой кошелёк',
-    modeHint: 'В демо-режиме агент тратит виртуальный баланс. Подключение реального кошелька (CDP) доступно через API и интеграции.',
+    modeWallet: 'Реальный кошелёк',
+    modeHint: 'В демо-режиме агент тратит виртуальный баланс. Реальный кошелёк — создание нового или подключение существующего.',
+    walletSource: 'Кошелёк',
+    walletSourceNew: 'Создать новый кошелёк',
+    walletSourceExisting: 'Подключить существующий',
+    walletAddress: 'Адрес кошелька (0x...)',
+    walletAddressPlaceholder: '0x...',
+    walletAddressHint: 'Введите адрес вашего EVM-кошелька. Баланс будет отображаться; отправка средств с этого адреса через агента недоступна.',
     error: 'Ошибка создания агента',
     creating: 'Создание...',
     submit: 'Создать',
@@ -47,8 +53,14 @@ const t = {
     typeHint: 'Investor buys for the long term. Trader looks for quick trades and sells at target.',
     mode: 'Agent mode',
     modeDemo: 'Demo balance',
-    modeWallet: 'Connect your wallet',
-    modeHint: 'In demo mode the agent spends virtual balance. Connecting a real wallet (CDP) is available via API and integrations.',
+    modeWallet: 'Real wallet',
+    modeHint: 'In demo mode the agent spends virtual balance. Real wallet: create new or connect existing.',
+    walletSource: 'Wallet',
+    walletSourceNew: 'Create new wallet',
+    walletSourceExisting: 'Connect existing wallet',
+    walletAddress: 'Wallet address (0x...)',
+    walletAddressPlaceholder: '0x...',
+    walletAddressHint: 'Enter your EVM wallet address. Balance will be shown; sending from this address via the agent is not available.',
     error: 'Failed to create agent',
     creating: 'Creating...',
     submit: 'Create',
@@ -65,6 +77,10 @@ export function CreateAgentForm() {
   const [description, setDescription] = useState('');
   const [agentType, setAgentType] = useState<'INVESTOR' | 'TRADER'>('INVESTOR');
   const [mode, setMode] = useState<'DEMO' | 'WALLET'>('DEMO');
+  const [walletSource, setWalletSource] = useState<'new' | 'existing'>('new');
+  const [existingWalletAddress, setExistingWalletAddress] = useState('');
+
+  const ethAddressRegex = /^0x[a-fA-F0-9]{40}$/;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -81,12 +97,23 @@ export function CreateAgentForm() {
       return;
     }
     const data = result.data;
+    if (data.mode === 'WALLET' && walletSource === 'existing') {
+      const addr = existingWalletAddress.trim();
+      if (!addr || !ethAddressRegex.test(addr)) {
+        setError(lang === 'ru' ? 'Введите корректный адрес кошелька (0x + 40 hex символов)' : 'Enter a valid wallet address (0x + 40 hex characters)');
+        return;
+      }
+    }
+    const payload: Record<string, unknown> = { ...data };
+    if (data.mode === 'WALLET' && walletSource === 'existing' && existingWalletAddress.trim()) {
+      payload.realWalletAddress = existingWalletAddress.trim();
+    }
     setIsSubmitting(true);
     try {
       const res = await fetch('/api/agents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const payload = await res.json().catch(() => null);
@@ -165,6 +192,49 @@ export function CreateAgentForm() {
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               {text.modeHint}
             </p>
+            {mode === 'WALLET' && (
+              <div className="mt-3 space-y-2 border-l-2 border-slate-200 pl-4 dark:border-slate-700">
+                <span className="text-sm font-medium">{text.walletSource}</span>
+                <div className="flex flex-wrap gap-4 text-sm">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="walletSource"
+                      value="new"
+                      checked={walletSource === 'new'}
+                      onChange={() => setWalletSource('new')}
+                    />
+                    <span>{text.walletSourceNew}</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="walletSource"
+                      value="existing"
+                      checked={walletSource === 'existing'}
+                      onChange={() => setWalletSource('existing')}
+                    />
+                    <span>{text.walletSourceExisting}</span>
+                  </label>
+                </div>
+                {walletSource === 'existing' && (
+                  <>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">{text.walletAddress}</label>
+                      <Input
+                        value={existingWalletAddress}
+                        onChange={(e) => setExistingWalletAddress(e.target.value)}
+                        placeholder={text.walletAddressPlaceholder}
+                        className="font-mono text-sm"
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {text.walletAddressHint}
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
           </div>
           {error && <p className="text-sm text-red-600">{error}</p>}
           <Button type="submit" disabled={isSubmitting} className="w-full">

@@ -183,9 +183,49 @@ export async function getBalanceByAddress(address: string, networkId: string): P
     });
     const json = (await res.json()) as { result?: string };
     const hex = json.result ?? '0x0';
+
+    // #region agent log
+    fetch('http://127.0.0.1:7866/ingest/f2b1bcb0-5cd1-4cfb-a22c-e4590e10ebab', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Debug-Session-Id': '57b590',
+      },
+      body: JSON.stringify({
+        sessionId: '57b590',
+        runId: 'pre-fix',
+        hypothesisId: 'H1-H3',
+        location: 'src/lib/cdp/rest.ts:getBalanceByAddress',
+        message: 'getBalanceByAddress RPC success',
+        data: { address, networkId, rpcUrl, hex },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion agent log
+
     return BigInt(hex).toString();
   } catch (err) {
     logger.error('getBalanceByAddress failed', { address, networkId, err });
+
+    // #region agent log
+    fetch('http://127.0.0.1:7866/ingest/f2b1bcb0-5cd1-4cfb-a22c-e4590e10ebab', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Debug-Session-Id': '57b590',
+      },
+      body: JSON.stringify({
+        sessionId: '57b590',
+        runId: 'pre-fix',
+        hypothesisId: 'H2',
+        location: 'src/lib/cdp/rest.ts:getBalanceByAddress',
+        message: 'getBalanceByAddress RPC error',
+        data: { address, networkId, rpcUrl },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion agent log
+
     return '0';
   }
 }

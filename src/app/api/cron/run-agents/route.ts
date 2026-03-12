@@ -6,6 +6,10 @@ import { sendTelegramMessageToChat } from '@/lib/telegram';
 import { getTelegramIdByEmail } from '@/lib/db/user-telegram';
 import { formatAssetQuantity } from '@/lib/utils/format';
 import { getAgentTradeDecision, getMarketPrices, getUsdtPriceUsd } from '@/lib/ai/agent-trader';
+import { createWalletClient, http, type Address } from 'viem';
+import { base, baseSepolia } from 'viem/chains';
+import { privateKeyToAccount } from 'viem/accounts';
+import { decryptPrivateKey } from '@/lib/wallets/serverKey';
 
 /**
  * Крон для агентов с run24_7: запускает один цикл принятия решения для каждого такого агента.
@@ -177,7 +181,6 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
       }
 
       const isConnectedWallet = !agent.realWalletId;
-      const networkId = agent.realWalletNetwork ?? 'base-sepolia';
       const valueWei = String(BigInt(Math.floor(amount * 1_000_000))); // USDC 6 decimals
       const toAddress =
         process.env.REAL_TRADE_RECIPIENT || '0x0000000000000000000000000000000000000000';
@@ -208,28 +211,118 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
           amountUsd: amount,
         });
       } else {
-        // Кошелёк создан в приложении (CDP): MVP — фиксируем как виртуальную сделку (реальную отправку можно добавить позже).
-        await prisma.realTransaction.create({
-          data: {
-            agentId: agent.id,
+        // Кошелёк создан/контролируется приложением (CDP или приватный ключ): отправляем реальную транзакцию.
+        const wallet = await prisma.wallet.findFirst({
+          where: {
             userId: agent.user.id,
-            txHash: 'virtual',
-            asset: decision.asset ?? 'USDC',
-            amountUsd: amount,
-            side: 'buy',
-            network: agent.realWalletNetwork ?? 'base',
-            walletAddress: agent.realWalletAddress,
+            address: agent.realWalletAddress.toLowerCase(),
           },
         });
-        realResults.push({
-          agentId: agent.id,
-          agentName: agent.name,
-          userEmail,
-          action: 'buy_coin',
-          reason: decision.reason,
-          asset: decision.asset,
-          amountUsd: amount,
-        });
+
+        if (!wallet) {
+          realResults.push({
+            agentId: agent.id,
+            agentName: agent.name,
+            userEmail,
+            action: 'error',
+            reason: 'Wallet record not found for real agent',
+            asset: decision.asset,
+            amountUsd: amount,
+          });
+          continue;
+        }
+
+        let txHash: string | undefined;
+        const walletNetworkId = wallet.networkId || process.env.NETWORK_ID || 'base-sepolia';
+
+        try {
+          if (wallet.cdpWalletId) {
+            const { sendTransaction } = await import('@/lib/cdp/transaction');
+            const res = await sendTransaction({
+              fromAddress: agent.realWalletAddress,
+              toAddress,
+              valueWei,
+              networkId: walletNetworkId,
+            });
+            txHash = res.txHash;
+          } else if (wallet.serverPrivateKey) {
+            const privateKey = decryptPrivateKey(wallet.serverPrivateKey);
+            const account = privateKeyToAccount(privateKey);
+
+            const { rpcUrl, chain } =
+              walletNetworkId === 'base-mainnet'
+                ? {
+                    rpcUrl: 'https://mainnet.base.org',
+                    chain: base,
+                  }
+                : walletNetworkId === 'base-sepolia'
+                  ? {
+                      rpcUrl: 'https://sepolia.base.org',
+                      chain: baseSepolia,
+                    }
+                  : {
+                      rpcUrl: process.env.BASE_RPC_URL ?? 'https://sepolia.base.org',
+                      chain: baseSepolia,
+                    };
+
+            const client = createWalletClient({
+              account,
+              chain,
+              transport: http(rpcUrl),
+            });
+
+            txHash = await client.sendTransaction({
+              to: toAddress as Address,
+              value: BigInt(valueWei),
+            });
+          } else {
+            realResults.push({
+              agentId: agent.id,
+              agentName: agent.name,
+              userEmail,
+              action: 'error',
+              reason:
+                'Wallet is not configured for server-side sending (no cdpWalletId or serverPrivateKey).',
+              asset: decision.asset,
+              amountUsd: amount,
+            });
+            continue;
+          }
+
+          await prisma.realTransaction.create({
+            data: {
+              agentId: agent.id,
+              userId: agent.user.id,
+              txHash: txHash ?? 'unknown',
+              asset: decision.asset ?? 'USDC',
+              amountUsd: amount,
+              side: 'buy',
+              network: agent.realWalletNetwork ?? 'base',
+              walletAddress: agent.realWalletAddress,
+            },
+          });
+
+          realResults.push({
+            agentId: agent.id,
+            agentName: agent.name,
+            userEmail,
+            action: 'buy_coin',
+            reason: decision.reason,
+            asset: decision.asset,
+            amountUsd: amount,
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          realResults.push({
+            agentId: agent.id,
+            agentName: agent.name,
+            userEmail,
+            action: 'error',
+            reason: `Failed to send real transaction: ${message}`,
+            asset: decision.asset,
+            amountUsd: amount,
+          });
+        }
       }
     }
   }

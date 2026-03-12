@@ -34,6 +34,8 @@ cp .env.example .env.local
 - `CDP_API_KEY_NAME` и `CDP_API_KEY_PRIVATE_KEY` — ключи из [Coinbase CDP Portal](https://portal.cdp.coinbase.com/projects/api-keys)
 - При необходимости: `OPENAI_API_KEY` (для демо-режима агента: нейросеть принимает решения о покупке/продаже), `MOLTBOOK_API_KEY`, `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
 - `WALLET_ENCRYPTION_KEY` — (опционально) секрет для шифрования приватных ключей кошельков, импортируемых пользователем. Если не задан, будет использован `NEXTAUTH_SECRET`, но для продакшена рекомендуется задать отдельный длинный случайный ключ.
+- `REAL_TRADE_RECIPIENT` — адрес, на который агенты в режиме реального кошелька (`agentMode = WALLET`, `realTradingEnabled = true`, `run24_7 = true`) будут отправлять реальные средства (USDC/USDT) при автотрейдинге. Для тестов укажите свой EVM-адрес в сети Base / Base Sepolia.
+- `NETWORK_ID` и (опционально) `BASE_RPC_URL` — идентификатор сети для CDP/кошельков (`base`, `base-sepolia` и т.п.) и RPC-URL, который будет использоваться при отправке транзакций из серверных маршрутов. По умолчанию используется Base Sepolia.
 
 **Важно:** не вставляйте API-ключи в чаты и не коммитьте их. Если ключ был показан посторонним — отзовите его в кабинете провайдера и создайте новый в `.env.local`.
 

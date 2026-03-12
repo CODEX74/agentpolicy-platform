@@ -48,6 +48,10 @@ export async function importPrivateKeyForUser(params: ImportPrivateKeyParams) {
       data: {
         walletId: wallet.id,
         walletAddress: wallet.address,
+        realWalletId: wallet.id,
+        realWalletAddress: wallet.address,
+        realWalletNetwork: wallet.networkId ?? networkId ?? process.env.NETWORK_ID ?? 'base-sepolia',
+        realWalletAsset: 'USDC',
       },
     });
   }

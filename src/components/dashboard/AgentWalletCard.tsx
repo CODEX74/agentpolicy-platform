@@ -27,6 +27,9 @@ const t: Record<
     addAndAttach: string;
     createWallet: string;
     connectInjected: string;
+    importPrivateKeyTitle: string;
+    importPrivateKeyWarning: string;
+    privateKeyPlaceholder: string;
     errLoad: string;
     errNetwork: string;
     errAttach: string;
@@ -38,6 +41,9 @@ const t: Record<
     errCreate: string;
     errNoInjectedWallet: string;
     errInjectedRequest: string;
+    errPrivateKeyEmpty: string;
+    errPrivateKeyInvalid: string;
+    errPrivateKeyImport: string;
   }
 > = {
   ru: {
@@ -57,6 +63,10 @@ const t: Record<
     addAndAttach: 'Добавить и привязать',
     createWallet: 'Создать кошелёк (CDP)',
     connectInjected: 'Импортировать из MetaMask / Bybit Web3',
+    importPrivateKeyTitle: 'Импорт приватного ключа (полный доступ агента)',
+    importPrivateKeyWarning:
+      'ВНИМАНИЕ: приватный ключ будет сохранён на сервере. Агент и сервер получат полный доступ к средствам на этом кошельке. Используйте только если полностью доверяете приложению.',
+    privateKeyPlaceholder: 'Приватный ключ 0x... (только EVM)',
     errLoad: 'Не удалось загрузить кошельки',
     errNetwork: 'Ошибка сети',
     errAttach: 'Не удалось привязать',
@@ -70,6 +80,11 @@ const t: Record<
       'Не найден кошелёк в браузере. Установите MetaMask или Bybit Web3 Wallet, либо введите адрес вручную.',
     errInjectedRequest:
       'Не удалось получить адрес из кошелька браузера. Проверьте разрешения и попробуйте ещё раз.',
+    errPrivateKeyEmpty: 'Введите приватный ключ кошелька.',
+    errPrivateKeyInvalid:
+      'Некорректный приватный ключ. Используйте ключ формата 0x... для EVM-кошелька.',
+    errPrivateKeyImport:
+      'Не удалось импортировать приватный ключ. Проверьте значение и попробуйте ещё раз.',
   },
   en: {
     wallet: 'Wallet',
@@ -88,6 +103,10 @@ const t: Record<
     addAndAttach: 'Add and attach',
     createWallet: 'Create wallet (CDP)',
     connectInjected: 'Import from MetaMask / Bybit Web3',
+    importPrivateKeyTitle: 'Import private key (full agent access)',
+    importPrivateKeyWarning:
+      'WARNING: the private key will be stored on the server. The agent and server will have full control over this wallet. Use only if you fully trust the app.',
+    privateKeyPlaceholder: 'Private key 0x... (EVM only)',
     errLoad: 'Failed to load wallets',
     errNetwork: 'Network error',
     errAttach: 'Failed to attach',
@@ -101,6 +120,11 @@ const t: Record<
       'No browser wallet found. Install MetaMask or Bybit Web3 Wallet, or paste the address manually.',
     errInjectedRequest:
       'Failed to obtain address from browser wallet. Check permissions and try again.',
+    errPrivateKeyEmpty: 'Enter a wallet private key.',
+    errPrivateKeyInvalid:
+      'Invalid private key. Use an 0x-prefixed EVM private key.',
+    errPrivateKeyImport:
+      'Failed to import private key. Check the value and try again.',
   },
 };
 
@@ -134,6 +158,7 @@ export function AgentWalletCard({
   const [sendAmountEth, setSendAmountEth] = useState('');
   const [attachedWalletId, setAttachedWalletId] = useState<string | null>(currentWalletId ?? null);
   const [attachedAddress, setAttachedAddress] = useState<string | null>(currentWalletAddress ?? null);
+  const [privateKey, setPrivateKey] = useState('');
 
   useEffect(() => {
     setAttachedWalletId(currentWalletId ?? null);
@@ -319,6 +344,42 @@ export function AgentWalletCard({
     }
   };
 
+  const handleImportPrivateKey = async () => {
+    const pk = privateKey.trim();
+    if (!pk) {
+      setError(text.errPrivateKeyEmpty);
+      return;
+    }
+    // Very basic validation: EVM private keys are typically 64 hex chars (32 bytes), with optional 0x prefix.
+    const cleaned = pk.startsWith('0x') ? pk.slice(2) : pk;
+    if (cleaned.length < 64) {
+      setError(text.errPrivateKeyInvalid);
+      return;
+    }
+
+    setError(null);
+    setActionLoading(true);
+    try {
+      const res = await fetch('/api/wallets/import-private-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ privateKey: pk, agentId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(typeof data?.error === 'string' ? data.error : text.errPrivateKeyImport);
+        return;
+      }
+      const wallet = data;
+      setAttachedWalletId(wallet._id);
+      setAttachedAddress(wallet.address);
+      setPrivateKey('');
+      await fetchWallets();
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const availableWallets = wallets.filter((w) => w._id !== attachedWalletId);
 
   return (
@@ -415,36 +476,68 @@ export function AgentWalletCard({
         )}
 
         {!attachedAddress && (
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              {text.orEnterAddress}
-            </label>
-            <div className="flex flex-wrap items-center gap-2">
-              <Input
-                type="text"
-                placeholder="0x..."
-                value={manualAddress}
-                onChange={(e) => setManualAddress(e.target.value)}
-                disabled={actionLoading}
-                className="font-mono max-w-xs"
-              />
-              <Button
-                type="button"
-                size="sm"
-                disabled={!manualAddress.trim() || actionLoading}
-                onClick={handleAddByAddress}
-              >
-                {text.addAndAttach}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={actionLoading}
-                onClick={handleImportFromInjectedWallet}
-              >
-                {text.connectInjected}
-              </Button>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                {text.orEnterAddress}
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  type="text"
+                  placeholder="0x..."
+                  value={manualAddress}
+                  onChange={(e) => setManualAddress(e.target.value)}
+                  disabled={actionLoading}
+                  className="font-mono max-w-xs"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={!manualAddress.trim() || actionLoading}
+                  onClick={handleAddByAddress}
+                >
+                  {text.addAndAttach}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={actionLoading}
+                  onClick={handleImportFromInjectedWallet}
+                >
+                  {text.connectInjected}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2 rounded-md border border-red-300 bg-red-50 p-3 dark:border-red-500/60 dark:bg-red-950/40">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-red-700 dark:text-red-300">
+                  {text.importPrivateKeyTitle}
+                </p>
+                <p className="text-xs text-red-700/90 dark:text-red-300/90">
+                  {text.importPrivateKeyWarning}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Input
+                  type="password"
+                  placeholder={text.privateKeyPlaceholder}
+                  value={privateKey}
+                  onChange={(e) => setPrivateKey(e.target.value)}
+                  disabled={actionLoading}
+                  className="font-mono max-w-xs"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={!privateKey.trim() || actionLoading}
+                  onClick={handleImportPrivateKey}
+                >
+                  {text.importPrivateKeyTitle}
+                </Button>
+              </div>
             </div>
           </div>
         )}

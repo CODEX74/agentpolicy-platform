@@ -27,9 +27,9 @@ export async function createRealAgentWallet(userId: string, agentId: string) {
       where: { userId, realWalletId: { not: null } },
     });
     if (existingCount >= maxPerUser) {
-      const limitErr: any = new Error(
+      const limitErr = new Error(
         'Достигнут лимит кошельков, созданных через CDP для этого пользователя. Подключите существующий кошелёк.',
-      );
+      ) as Error & { code: string };
       limitErr.code = 'APP_CDP_WALLET_LIMIT';
       throw limitErr;
     }

@@ -121,18 +121,18 @@ export async function createWallet(networkId: string): Promise<CreateWalletResul
   });
   if (!res.ok) {
     const text = await res.text();
-    let parsed: any;
+    let parsed: { code?: string; message?: string } | undefined;
     try {
-      parsed = JSON.parse(text);
+      parsed = JSON.parse(text) as { code?: string; message?: string };
     } catch {
       parsed = undefined;
     }
 
     // Detect explicit CDP rate limiting on CreateWallet operation
     if (res.status === 429 || parsed?.code === 'resource_exhausted') {
-      const rateErr: any = new Error(
+      const rateErr = new Error(
         parsed?.message || 'CDP CreateWallet rate limit exceeded',
-      );
+      ) as Error & { code?: string; retryAfterSeconds?: number };
       rateErr.code = 'CDP_RATE_LIMIT';
       const retryHeader = res.headers.get('Retry-After');
       if (retryHeader) {

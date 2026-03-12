@@ -41,13 +41,20 @@ export function DashboardBalanceSection() {
 
   return (
     <div className="space-y-6">
-      {balanceHistory.length > 0 && <BalanceChart data={balanceHistory} />}
+      {balanceHistory.length > 0 && <BalanceChart data={balanceHistory} unit="USDT" />}
       {agentBalances.length > 0 && (
         <div>
           <p className="mb-2 text-sm text-zinc-500 dark:text-zinc-400">
             {text.demoBalancePerAgent}
           </p>
-          <AgentBalancesChart data={agentBalances} />
+          <AgentBalancesChart
+            data={agentBalances.map((a) => ({
+              agentId: a.agentId,
+              name: a.name,
+              value: a.demoBalance,
+            }))}
+            unit="USDT"
+          />
         </div>
       )}
     </div>

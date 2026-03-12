@@ -13,10 +13,15 @@ import {
 interface AgentBalance {
   agentId: string;
   name: string;
-  demoBalance: number;
+  value: number;
 }
 
-export function AgentBalancesChart({ data }: { data: AgentBalance[] }) {
+interface AgentBalancesChartProps {
+  data: AgentBalance[];
+  unit?: string;
+}
+
+export function AgentBalancesChart({ data, unit = 'USDT' }: AgentBalancesChartProps) {
   if (!data?.length) {
     return (
       <div className="flex h-64 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
@@ -43,11 +48,11 @@ export function AgentBalancesChart({ data }: { data: AgentBalance[] }) {
             tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v))}
           />
           <Tooltip
-            formatter={(value: any) => [`${Number(value ?? 0).toFixed(2)} USDT`, 'Баланс']}
+            formatter={(value: any) => [`${Number(value ?? 0).toFixed(4)} ${unit}`, 'Баланс']}
           />
           <Bar
-            dataKey="demoBalance"
-            name="Баланс, USDT"
+            dataKey="value"
+            name={`Баланс, ${unit}`}
             fill="#6366F1"
             fillOpacity={0.7}
           />

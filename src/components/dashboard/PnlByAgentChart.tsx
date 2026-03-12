@@ -17,7 +17,12 @@ interface PnlRecord {
   pnlTotal: number;
 }
 
-export function PnlByAgentChart({ data }: { data: PnlRecord[] }) {
+interface PnlByAgentChartProps {
+  data: PnlRecord[];
+  unit?: string;
+}
+
+export function PnlByAgentChart({ data, unit = 'USDT' }: PnlByAgentChartProps) {
   if (!data?.length) {
     return (
       <div className="flex h-64 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
@@ -41,12 +46,16 @@ export function PnlByAgentChart({ data }: { data: PnlRecord[] }) {
           />
           <YAxis
             className="text-xs"
-            tickFormatter={(v) => (v >= 1000 || v <= -1000 ? `${(v / 1000).toFixed(1)}k` : String(v))}
+            tickFormatter={(v) =>
+              v >= 1000 || v <= -1000 ? `${(v / 1000).toFixed(1)}k` : String(v)
+            }
           />
-          <Tooltip formatter={(value: any) => [`${Number(value ?? 0).toFixed(2)} USDT`, 'PnL']} />
+          <Tooltip
+            formatter={(value: any) => [`${Number(value ?? 0).toFixed(4)} ${unit}`, 'PnL']}
+          />
           <Bar
             dataKey="pnlTotal"
-            name="PnL, USDT"
+            name={`PnL, ${unit}`}
             fillOpacity={0.7}
           >
             {data.map((entry, index) => (

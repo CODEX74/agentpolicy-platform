@@ -27,7 +27,12 @@ function formatLabelDate(iso: string) {
   });
 }
 
-export function AgentBuysChart({ data }: { data: AgentBuyPoint[] }) {
+interface AgentBuysChartProps {
+  data: AgentBuyPoint[];
+  unit?: string;
+}
+
+export function AgentBuysChart({ data, unit = 'USDT' }: AgentBuysChartProps) {
   if (!data?.length) {
     return (
       <div className="flex h-64 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
@@ -79,14 +84,14 @@ export function AgentBuysChart({ data }: { data: AgentBuyPoint[] }) {
                   />
                   <Tooltip
                     formatter={(value: any) =>
-                      `${Number(value ?? 0).toFixed(2)} USDT`
+                      `${Number(value ?? 0).toFixed(4)} ${unit}`
                     }
                     labelFormatter={(label: any) => formatLabelDate(String(label))}
                   />
                   <Line
                     type="monotone"
                     dataKey="buyAmount"
-                    name="Покупки, USDT"
+                    name={`Покупки, ${unit}`}
                     fill="#0EA5E9"
                     stroke="#0EA5E9"
                     strokeWidth={1.5}

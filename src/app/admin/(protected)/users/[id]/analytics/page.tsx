@@ -91,7 +91,14 @@ export default function AdminUserAnalyticsPage() {
                   Текущий демо-баланс каждого агента в USDT.
                 </p>
                 <div className="mt-3">
-                  <AgentBalancesChart data={data.agentBalances} />
+                  <AgentBalancesChart
+                    data={data.agentBalances.map((a: any) => ({
+                      agentId: a.agentId,
+                      name: a.name,
+                      value: a.demoBalance,
+                    }))}
+                    unit="USDT"
+                  />
                 </div>
               </div>
               <div className="space-y-4">
@@ -114,7 +121,13 @@ export default function AdminUserAnalyticsPage() {
                           {a.name}
                         </p>
                         <div className="mt-2 h-64">
-                          <AssetAllocationChart data={a.assets} />
+                          <AssetAllocationChart
+                            data={a.assets.map((asset: any) => ({
+                              asset: asset.asset,
+                              value: asset.valueUsd,
+                            }))}
+                            unit="USDT"
+                          />
                         </div>
                       </div>
                     ))}
@@ -129,7 +142,7 @@ export default function AdminUserAnalyticsPage() {
                 Суммарная разница между проданным и купленным объёмом в демо-режиме по каждому агенту.
               </p>
               <div className="mt-3">
-                <PnlByAgentChart data={data.pnlByAgent} />
+                <PnlByAgentChart data={data.pnlByAgent} unit="USDT" />
               </div>
             </section>
 
@@ -139,7 +152,7 @@ export default function AdminUserAnalyticsPage() {
                 Объём покупок в USDT по дням для каждого агента отдельно.
               </p>
               <div className="mt-3">
-                <AgentBuysChart data={data.buysByAgentOverTime} />
+                <AgentBuysChart data={data.buysByAgentOverTime} unit="USDT" />
               </div>
             </section>
           </div>

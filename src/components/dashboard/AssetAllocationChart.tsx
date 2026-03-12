@@ -12,7 +12,7 @@ import { useLang, type Lang } from '@/contexts/LanguageContext';
 
 interface AssetSlice {
   asset: string;
-  valueUsd: number;
+  value: number;
 }
 
 const COLORS = [
@@ -33,10 +33,15 @@ const t: Record<Lang, { noPositions: string; asset: string }> = {
   en: { noPositions: 'No open positions by asset', asset: 'Asset' },
 };
 
-export function AssetAllocationChart({ data }: { data: AssetSlice[] }) {
+interface AssetAllocationChartProps {
+  data: AssetSlice[];
+  unit?: string;
+}
+
+export function AssetAllocationChart({ data, unit = 'USDT' }: AssetAllocationChartProps) {
   const lang = useLang();
   const text = t[lang];
-  const nonZero = data.filter((d) => d.valueUsd > 0);
+  const nonZero = data.filter((d) => d.value > 0);
 
   if (!nonZero.length) {
     return (
@@ -52,7 +57,7 @@ export function AssetAllocationChart({ data }: { data: AssetSlice[] }) {
         <PieChart>
           <Pie
             data={nonZero}
-            dataKey="valueUsd"
+            dataKey="value"
             nameKey="asset"
             cx="50%"
             cy="50%"
@@ -71,7 +76,7 @@ export function AssetAllocationChart({ data }: { data: AssetSlice[] }) {
           </Pie>
           <Tooltip
             formatter={(value: any, _name, entry: any) => [
-              `${Number(value ?? 0).toFixed(2)} USDT`,
+              `${Number(value ?? 0).toFixed(4)} ${unit}`,
               entry?.payload?.asset ?? text.asset,
             ]}
           />

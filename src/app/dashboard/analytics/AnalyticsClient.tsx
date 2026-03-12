@@ -7,45 +7,102 @@ import { AssetAllocationChart } from '@/components/dashboard/AssetAllocationChar
 import { PnlByAgentChart } from '@/components/dashboard/PnlByAgentChart';
 import { AgentBuysChart } from '@/components/dashboard/AgentBuysChart';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useRealAnalytics } from '@/hooks/useRealAnalytics';
 import { Button } from '@/components/ui/Button';
 import { useLang, type Lang } from '@/contexts/LanguageContext';
 
-const t: Record<Lang, Record<string, string>> = {
+const t: Record<
+  Lang,
+  {
+    demoTitle: string;
+    demoSubtitle: string;
+    realTitle: string;
+    realSubtitle: string;
+    loading: string;
+    volumeTitle: string;
+    volumeSubDemo: string;
+    volumeSubReal: string;
+    balancesTitleDemo: string;
+    balancesSubDemo: string;
+    balancesTitleReal: string;
+    balancesSubReal: string;
+    allocationTitle: string;
+    allocationSubDemo: string;
+    allocationSubReal: string;
+    noPositions: string;
+    pnlTitle: string;
+    pnlSubDemo: string;
+    pnlSubReal: string;
+    buysTitle: string;
+    buysSubDemo: string;
+    buysSubReal: string;
+    generateReport: string;
+    generating: string;
+    tabDemo: string;
+    tabReal: string;
+  }
+> = {
   ru: {
-    title: 'Аналитика',
-    subtitle: 'Демонстрационная аналитика по агентам: объём операций, балансы, распределение активов и P&L.',
+    demoTitle: 'Аналитика по демо-балансам',
+    demoSubtitle:
+      'Демонстрационная аналитика по агентам: объём операций, балансы, распределение активов и P&L в USDT.',
+    realTitle: 'Аналитика по настоящим балансам',
+    realSubtitle:
+      'Аналитика по агентам с реальными кошельками: операции, балансы и распределение активов в ETH.',
     loading: 'Загрузка...',
-    volumeTitle: 'Объём операций по дням (USDT)',
-    volumeSub: 'Суммарный объём демо-операций агентов по дням за последние 14 дней.',
-    balancesTitle: 'Балансы агентов (демо)',
-    balancesSub: 'Текущий демо-баланс каждого агента в USDT.',
+    volumeTitle: 'Объём операций по дням',
+    volumeSubDemo: 'Суммарный объём демо-операций агентов по дням за последние 14 дней (USDT).',
+    volumeSubReal: 'Суммарный объём реальных операций агентов по дням за последние 14 дней (ETH).',
+    balancesTitleDemo: 'Балансы агентов (демо)',
+    balancesSubDemo: 'Текущий демо-баланс каждого агента в USDT.',
+    balancesTitleReal: 'Балансы агентов (реальные кошельки)',
+    balancesSubReal: 'Текущий on-chain баланс каждого агента в ETH.',
     allocationTitle: 'Распределение активов по агентам',
-    allocationSub: 'Текущие демо-позиции каждого агента, оценённые по рыночной цене.',
+    allocationSubDemo: 'Текущие демо-позиции каждого агента, оценённые по рыночной цене (USDT).',
+    allocationSubReal: 'Распределение реальных операций агентов по активам (в ETH).',
     noPositions: 'Нет данных по позициям агентов',
     pnlTitle: 'P&L агентов (все время)',
-    pnlSub: 'Суммарная разница между проданным и купленным объёмом в демо-режиме по каждому агенту.',
+    pnlSubDemo:
+      'Суммарная разница между проданным и купленным объёмом в демо-режиме по каждому агенту (USDT).',
+    pnlSubReal:
+      'Суммарная разница между проданным и купленным объёмом реальных сделок по каждому агенту (ETH, по текущему курсу).',
     buysTitle: 'Сумма на одну покупку по агентам',
-    buysSub: 'Объём покупок в USDT по дням для каждого агента отдельно.',
+    buysSubDemo: 'Объём покупок в USDT по дням для каждого агента.',
+    buysSubReal: 'Объём реальных покупок в ETH по времени для каждого агента.',
     generateReport: 'Сформировать отчёт',
     generating: 'Формирование отчёта…',
+    tabDemo: 'Аналитика по демо-балансам',
+    tabReal: 'Аналитика по настоящим балансам',
   },
   en: {
-    title: 'Analytics',
-    subtitle: 'Demo analytics per agent: transaction volume, balances, asset allocation and P&L.',
+    demoTitle: 'Demo balance analytics',
+    demoSubtitle:
+      'Demo analytics per agent: transaction volume, balances, asset allocation and P&L in USDT.',
+    realTitle: 'Real balance analytics',
+    realSubtitle:
+      'Analytics for agents with real wallets: operations, balances and asset allocation in ETH.',
     loading: 'Loading...',
-    volumeTitle: 'Transaction volume by day (USDT)',
-    volumeSub: 'Total demo transaction volume by day over the last 14 days.',
-    balancesTitle: 'Agent balances (demo)',
-    balancesSub: 'Current demo balance per agent in USDT.',
+    volumeTitle: 'Transaction volume by day',
+    volumeSubDemo: 'Total demo transaction volume by day over the last 14 days (USDT).',
+    volumeSubReal: 'Total real transaction volume by day over the last 14 days (ETH).',
+    balancesTitleDemo: 'Agent balances (demo)',
+    balancesSubDemo: 'Current demo balance per agent in USDT.',
+    balancesTitleReal: 'Agent balances (real wallets)',
+    balancesSubReal: 'Current on-chain balance per agent in ETH.',
     allocationTitle: 'Asset allocation by agent',
-    allocationSub: 'Current demo positions per agent at market price.',
+    allocationSubDemo: 'Current demo positions per agent at market price (USDT).',
+    allocationSubReal: 'Allocation of real operations per agent by asset (in ETH).',
     noPositions: 'No agent position data',
     pnlTitle: 'Agent P&L (all time)',
-    pnlSub: 'Total difference between sold and bought volume in demo mode per agent.',
+    pnlSubDemo: 'Total P&L in demo mode per agent (USDT).',
+    pnlSubReal: 'Total P&L in real trades per agent (ETH, based on current rate).',
     buysTitle: 'Amount per purchase by agents',
-    buysSub: 'Purchase volume in USDT by day for each agent.',
+    buysSubDemo: 'Purchase volume in USDT by day for each agent.',
+    buysSubReal: 'Real purchase volume in ETH over time for each agent.',
     generateReport: 'Generate report',
     generating: 'Generating report…',
+    tabDemo: 'Demo balance analytics',
+    tabReal: 'Real balance analytics',
   },
 };
 
@@ -60,7 +117,16 @@ export function AnalyticsClient() {
     buysByAgentOverTime,
     isLoading,
   } = useAnalytics();
+  const {
+    balanceHistory: balanceHistoryReal,
+    agentBalances: agentBalancesReal,
+    assetAllocationByAgent: assetAllocationByAgentReal,
+    pnlByAgent: pnlByAgentReal,
+    buysByAgentOverTime: buysByAgentOverTimeReal,
+    isLoading: isLoadingReal,
+  } = useRealAnalytics();
   const [isDownloading, setIsDownloading] = useState(false);
+  const [mode, setMode] = useState<'demo' | 'real'>('demo');
 
   const handleDownloadReport = async () => {
     try {
@@ -88,10 +154,39 @@ export function AnalyticsClient() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold">{text.title}</h1>
-      <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{text.subtitle}</p>
+      <h1 className="text-2xl font-bold">
+        {mode === 'demo' ? text.demoTitle : text.realTitle}
+      </h1>
+      <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+        {mode === 'demo' ? text.demoSubtitle : text.realSubtitle}
+      </p>
 
-      {isLoading ? (
+      <div className="mt-4 inline-flex rounded-lg border border-zinc-200 bg-zinc-100 p-1 text-xs dark:border-zinc-800 dark:bg-zinc-900">
+        <button
+          type="button"
+          onClick={() => setMode('demo')}
+          className={`rounded-md px-3 py-1 transition ${
+            mode === 'demo'
+              ? 'bg-white text-zinc-900 shadow dark:bg-zinc-800 dark:text-zinc-50'
+              : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
+          }`}
+        >
+          {text.tabDemo}
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('real')}
+          className={`ml-1 rounded-md px-3 py-1 transition ${
+            mode === 'real'
+              ? 'bg-white text-zinc-900 shadow dark:bg-zinc-800 dark:text-zinc-50'
+              : 'text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100'
+          }`}
+        >
+          {text.tabReal}
+        </button>
+      </div>
+
+      {(mode === 'demo' ? isLoading : isLoadingReal) ? (
         <div className="mt-6 flex h-64 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
           <p className="text-zinc-500">{text.loading}</p>
         </div>
@@ -99,37 +194,70 @@ export function AnalyticsClient() {
         <div className="mt-6 space-y-8">
           <section>
             <h2 className="text-lg font-semibold">{text.volumeTitle}</h2>
-            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{text.volumeSub}</p>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              {mode === 'demo' ? text.volumeSubDemo : text.volumeSubReal}
+            </p>
             <div className="mt-3">
-              <BalanceChart data={balanceHistory} />
+              <BalanceChart
+                data={mode === 'demo' ? balanceHistory : balanceHistoryReal}
+                unit={mode === 'demo' ? 'USDT' : 'ETH'}
+              />
             </div>
           </section>
 
           <section className="grid gap-6 lg:grid-cols-2">
             <div>
-              <h2 className="text-lg font-semibold">{text.balancesTitle}</h2>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{text.balancesSub}</p>
+              <h2 className="text-lg font-semibold">
+                {mode === 'demo' ? text.balancesTitleDemo : text.balancesTitleReal}
+              </h2>
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                {mode === 'demo' ? text.balancesSubDemo : text.balancesSubReal}
+              </p>
               <div className="mt-3">
-                <AgentBalancesChart data={agentBalances} />
+                <AgentBalancesChart
+                  data={(
+                    mode === 'demo' ? agentBalances : agentBalancesReal
+                  ).map((a: any) => ({
+                    agentId: a.agentId,
+                    name: a.name,
+                    value: mode === 'demo' ? a.demoBalance : a.balanceEth,
+                  }))}
+                  unit={mode === 'demo' ? 'USDT' : 'ETH'}
+                />
               </div>
             </div>
             <div className="space-y-4">
               <h2 className="text-lg font-semibold">{text.allocationTitle}</h2>
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{text.allocationSub}</p>
-              {assetAllocationByAgent.length === 0 ? (
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                {mode === 'demo' ? text.allocationSubDemo : text.allocationSubReal}
+              </p>
+              {(mode === 'demo' ? assetAllocationByAgent : assetAllocationByAgentReal).length === 0 ? (
                 <div className="mt-3 flex h-64 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
                   <p className="text-zinc-500">{text.noPositions}</p>
                 </div>
               ) : (
                 <div className="mt-3 space-y-4">
-                  {assetAllocationByAgent.map((a) => (
-                    <div key={a.agentId} className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800">
-                      <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{a.name}</p>
-                      <div className="mt-2">
-                        <AssetAllocationChart data={a.assets} />
+                  {(mode === 'demo' ? assetAllocationByAgent : assetAllocationByAgentReal).map(
+                    (a: any) => (
+                      <div
+                        key={a.agentId}
+                        className="rounded-lg border border-zinc-200 p-3 dark:border-zinc-800"
+                      >
+                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                          {a.name}
+                        </p>
+                        <div className="mt-2">
+                          <AssetAllocationChart
+                            data={a.assets.map((asset: any) => ({
+                              asset: asset.asset,
+                              value: asset.valueUsd ?? asset.value,
+                            }))}
+                            unit={mode === 'demo' ? 'USDT' : 'ETH'}
+                          />
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
               )}
             </div>
@@ -137,17 +265,27 @@ export function AnalyticsClient() {
 
           <section>
             <h2 className="text-lg font-semibold">{text.pnlTitle}</h2>
-            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{text.pnlSub}</p>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              {mode === 'demo' ? text.pnlSubDemo : text.pnlSubReal}
+            </p>
             <div className="mt-3">
-              <PnlByAgentChart data={pnlByAgent} />
+              <PnlByAgentChart
+                data={mode === 'demo' ? pnlByAgent : pnlByAgentReal}
+                unit={mode === 'demo' ? 'USDT' : 'ETH'}
+              />
             </div>
           </section>
 
           <section className="mx-auto max-w-6xl pb-20">
             <h2 className="text-lg font-semibold">{text.buysTitle}</h2>
-            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{text.buysSub}</p>
+            <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+              {mode === 'demo' ? text.buysSubDemo : text.buysSubReal}
+            </p>
             <div className="mt-3">
-              <AgentBuysChart data={buysByAgentOverTime} />
+              <AgentBuysChart
+                data={mode === 'demo' ? buysByAgentOverTime : buysByAgentOverTimeReal}
+                unit={mode === 'demo' ? 'USDT' : 'ETH'}
+              />
             </div>
           </section>
 

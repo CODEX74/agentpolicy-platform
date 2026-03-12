@@ -27,7 +27,12 @@ const t: Record<Lang, { noData: string; volume: string }> = {
   en: { noData: 'No chart data', volume: 'Volume' },
 };
 
-export function BalanceChart({ data }: { data: DataPoint[] }) {
+interface BalanceChartProps {
+  data: DataPoint[];
+  unit?: string;
+}
+
+export function BalanceChart({ data, unit = 'USDT' }: BalanceChartProps) {
   const lang = useLang();
   const locale = lang === 'en' ? 'en-US' : 'ru-RU';
   const text = t[lang];
@@ -63,7 +68,7 @@ export function BalanceChart({ data }: { data: DataPoint[] }) {
             }
           />
           <Tooltip
-            formatter={(value: any) => [`${fmtBal(Number(value ?? 0))} USDT`, text.volume]}
+            formatter={(value: any) => [`${fmtBal(Number(value ?? 0))} ${unit}`, text.volume]}
             labelFormatter={(label) => fmtShort(String(label))}
           />
           <Area

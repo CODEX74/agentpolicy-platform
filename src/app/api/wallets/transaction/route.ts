@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db/prisma';
 import { z } from 'zod';
 import { createWalletClient, http, type Address } from 'viem';
+import { base, baseSepolia } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { decryptPrivateKey } from '@/lib/wallets/serverKey';
 
@@ -51,15 +52,25 @@ export async function POST(req: NextRequest) {
       const account = privateKeyToAccount(privateKey);
 
       const networkId = wallet.networkId || process.env.NETWORK_ID || 'base-sepolia';
-      const rpcUrl =
+      const { rpcUrl, chain } =
         networkId === 'base-mainnet'
-          ? 'https://mainnet.base.org'
+          ? {
+              rpcUrl: 'https://mainnet.base.org',
+              chain: base,
+            }
           : networkId === 'base-sepolia'
-            ? 'https://sepolia.base.org'
-            : process.env.BASE_RPC_URL ?? 'https://sepolia.base.org';
+            ? {
+                rpcUrl: 'https://sepolia.base.org',
+                chain: baseSepolia,
+              }
+            : {
+                rpcUrl: process.env.BASE_RPC_URL ?? 'https://sepolia.base.org',
+                chain: baseSepolia,
+              };
 
       const client = createWalletClient({
         account,
+        chain,
         transport: http(rpcUrl),
       });
 

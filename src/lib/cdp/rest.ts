@@ -121,6 +121,30 @@ export async function createWallet(networkId: string): Promise<CreateWalletResul
   });
   if (!res.ok) {
     const text = await res.text();
+    let parsed: any;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      parsed = undefined;
+    }
+
+    // Detect explicit CDP rate limiting on CreateWallet operation
+    if (res.status === 429 || parsed?.code === 'resource_exhausted') {
+      const rateErr: any = new Error(
+        parsed?.message || 'CDP CreateWallet rate limit exceeded',
+      );
+      rateErr.code = 'CDP_RATE_LIMIT';
+      const retryHeader = res.headers.get('Retry-After');
+      if (retryHeader) {
+        const retryAfter = Number(retryHeader);
+        if (!Number.isNaN(retryAfter) && retryAfter > 0) {
+          rateErr.retryAfterSeconds = retryAfter;
+        }
+      }
+      logger.error('CDP createWallet rate limited', { status: res.status, body: text });
+      throw rateErr;
+    }
+
     logger.error('CDP createWallet failed', { status: res.status, body: text });
     throw new Error(`CDP createWallet failed: ${res.status} ${text.slice(0, 200)}`);
   }

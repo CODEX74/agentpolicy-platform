@@ -18,21 +18,45 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const { agentId } = createSchema.parse(body);
 
+    const networkId = process.env.NETWORK_ID ?? 'base-sepolia';
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+
+    // Optional app-level quota: limit CDP-created wallets per user (cdpWalletId != null).
+    const maxPerUser = Number(process.env.CDP_MAX_WALLETS_PER_USER ?? '5');
+    if (Number.isFinite(maxPerUser) && maxPerUser > 0) {
+      const existingCount = await prisma.wallet.count({
+        where: { userId: user.id, cdpWalletId: { not: null } },
+      });
+      if (existingCount >= maxPerUser) {
+        return NextResponse.json(
+          {
+            error:
+              'Достигнут лимит кошельков, созданных через CDP для этого пользователя. Подключите существующий кошелёк.',
+          },
+          { status: 429 },
+        );
+      }
+    }
+
     const { createAgentWallet } = await import('@/lib/cdp/wallet');
     let result: { address: string; walletId?: string };
     try {
       result = await createAgentWallet();
     } catch (createErr) {
       console.error('createAgentWallet failed', createErr);
+      const anyErr = createErr as { code?: string } | Error | null;
+      if (anyErr && (anyErr as { code?: string }).code === 'CDP_RATE_LIMIT') {
+        const message =
+          'Лимит создания кошельков в CDP превышен. Подождите несколько минут или подключите существующий кошелёк.';
+        return NextResponse.json({ error: message }, { status: 429 });
+      }
       const message =
         process.env.CDP_API_KEY_NAME && process.env.CDP_API_KEY_PRIVATE_KEY
           ? 'Не удалось создать кошелёк через CDP. Проверьте ключи и сеть.'
           : 'CDP не настроен. Добавьте CDP_API_KEY_NAME и CDP_API_KEY_PRIVATE_KEY в .env.local';
       return NextResponse.json({ error: message }, { status: 503 });
     }
-    const networkId = process.env.NETWORK_ID ?? 'base-sepolia';
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
     const wallet = await prisma.wallet.create({
       data: {

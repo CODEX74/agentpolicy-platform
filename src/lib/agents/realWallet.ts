@@ -20,6 +20,21 @@ export async function createRealAgentWallet(userId: string, agentId: string) {
     return agent;
   }
 
+  // Optional app-level quota: limit number of CDP-created wallets per user (realWalletId != null).
+  const maxPerUser = Number(process.env.CDP_MAX_WALLETS_PER_USER ?? '5');
+  if (Number.isFinite(maxPerUser) && maxPerUser > 0) {
+    const existingCount = await prisma.agent.count({
+      where: { userId, realWalletId: { not: null } },
+    });
+    if (existingCount >= maxPerUser) {
+      const limitErr: any = new Error(
+        'Достигнут лимит кошельков, созданных через CDP для этого пользователя. Подключите существующий кошелёк.',
+      );
+      limitErr.code = 'APP_CDP_WALLET_LIMIT';
+      throw limitErr;
+    }
+  }
+
   const { address, walletId } = await createAgentWallet();
 
   const updated = await prisma.agent.update({

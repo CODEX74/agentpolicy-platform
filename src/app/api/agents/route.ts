@@ -145,6 +145,7 @@ export async function POST(req: NextRequest) {
     });
 
     let finalAgent = agent;
+    let warning: string | undefined;
     if (data.mode === 'WALLET') {
       const existingAddress = data.realWalletAddress?.trim();
       if (existingAddress && ethAddressRegex.test(existingAddress)) {
@@ -161,12 +162,23 @@ export async function POST(req: NextRequest) {
           const { createRealAgentWallet } = await import('@/lib/agents/realWallet');
           finalAgent = await createRealAgentWallet(user.id, agent.id);
         } catch (walletErr) {
-          console.error('createRealAgentWallet failed (agent created without real wallet)', walletErr);
+          const anyErr = walletErr as { code?: string } | Error | null;
+          if (anyErr && (anyErr as { code?: string }).code === 'CDP_RATE_LIMIT') {
+            warning =
+              'CDP: лимит создания кошельков превышен. Агент создан без реального кошелька.';
+          }
+          console.error(
+            'createRealAgentWallet failed (agent created without real wallet)',
+            walletErr,
+          );
         }
       }
     }
 
-    return NextResponse.json(toAgentResponse(finalAgent as unknown as Parameters<typeof toAgentResponse>[0]));
+    return NextResponse.json({
+      ...toAgentResponse(finalAgent as unknown as Parameters<typeof toAgentResponse>[0]),
+      ...(warning ? { warning } : {}),
+    });
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: err.flatten() }, { status: 400 });

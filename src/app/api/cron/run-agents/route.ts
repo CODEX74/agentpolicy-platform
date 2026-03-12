@@ -156,7 +156,17 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
         continue;
       }
 
-      const amount = decision.amountEth ?? 0;
+      const rawAmount = decision.amountEth ?? 0;
+      // Приводим сумму к лимитам: не больше maxPerTx и не больше доступного дневного лимита.
+      const remainingDaily = dailyLimit > 0 ? dailyLimit - spentToday : -1;
+      let amount = rawAmount;
+      if (maxPerTx > 0) {
+        amount = Math.min(amount, maxPerTx);
+      }
+      if (remainingDaily > 0) {
+        amount = Math.min(amount, remainingDaily);
+      }
+
       if (decision.action !== 'buy_coin' || amount <= 0) {
         realResults.push({
           agentId: agent.id,

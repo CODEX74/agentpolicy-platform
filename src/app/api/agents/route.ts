@@ -20,6 +20,7 @@ const createAgentSchema = z.object({
     .string()
     .optional()
     .refine((v) => !v || ethAddressRegex.test(v.trim()), { message: 'Invalid EVM address' }),
+  walletSecret: z.string().optional(),
 });
 
 function toAgentResponse(a: {
@@ -147,8 +148,35 @@ export async function POST(req: NextRequest) {
     let finalAgent = agent;
     let warning: string | undefined;
     if (data.mode === 'WALLET') {
+      const secret = data.walletSecret?.trim();
       const existingAddress = data.realWalletAddress?.trim();
-      if (existingAddress && ethAddressRegex.test(existingAddress)) {
+      if (secret) {
+        try {
+          const { importPrivateKeyForUser } = await import('@/lib/wallets/importPrivateKey');
+          const networkId = process.env.NETWORK_ID ?? 'base-sepolia';
+          await importPrivateKeyForUser({
+            userId: user.id,
+            privateKey: secret,
+            agentId: agent.id,
+            networkId,
+          });
+          const updated = await prisma.agent.findFirst({
+            where: { id: agent.id, userId: user.id },
+          });
+          if (updated) {
+            finalAgent = updated;
+          }
+        } catch (walletErr) {
+          console.error('importPrivateKeyForUser failed during agent creation', walletErr);
+          return NextResponse.json(
+            {
+              error:
+                'Не удалось импортировать приватный ключ для этого агента. Проверьте формат ключа и настройки сервера.',
+            },
+            { status: 400 },
+          );
+        }
+      } else if (existingAddress && ethAddressRegex.test(existingAddress)) {
         finalAgent = await prisma.agent.update({
           where: { id: agent.id },
           data: {

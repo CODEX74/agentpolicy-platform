@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/options';
 import { prisma } from '@/lib/db/prisma';
-import { encryptPrivateKey } from '@/lib/wallets/serverKey';
+import { importPrivateKeyForUser } from '@/lib/wallets/importPrivateKey';
 import { z } from 'zod';
-import { privateKeyToAccount } from 'viem/accounts';
 
 const bodySchema = z.object({
   privateKey: z.string().min(1),
@@ -25,53 +24,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { privateKey, agentId, networkId } = bodySchema.parse(body);
 
-    const normalizedKey = privateKey.trim().toLowerCase().startsWith('0x')
-      ? (privateKey.trim().toLowerCase() as `0x${string}`)
-      : (`0x${privateKey.trim().toLowerCase()}` as `0x${string}`);
-
-    let accountAddress: string;
-    try {
-      const account = privateKeyToAccount(normalizedKey);
-      accountAddress = account.address.toLowerCase();
-    } catch {
-      return NextResponse.json(
-        { error: 'Некорректный приватный ключ. Проверьте формат и попробуйте ещё раз.' },
-        { status: 400 },
-      );
-    }
-
-    const encryptedKey = encryptPrivateKey(normalizedKey);
-
-    const wallet = await prisma.wallet.upsert({
-      where: {
-        userId_address: {
-          userId: user.id,
-          address: accountAddress,
-        },
-      },
-      update: {
-        serverPrivateKey: encryptedKey,
-        networkId: networkId ?? process.env.NETWORK_ID ?? 'base-sepolia',
-        agentId: agentId ?? undefined,
-      },
-      create: {
-        userId: user.id,
-        address: accountAddress,
-        networkId: networkId ?? process.env.NETWORK_ID ?? 'base-sepolia',
-        agentId: agentId ?? undefined,
-        serverPrivateKey: encryptedKey,
-      },
+    const wallet = await importPrivateKeyForUser({
+      userId: user.id,
+      privateKey,
+      agentId,
+      networkId,
     });
-
-    if (agentId) {
-      await prisma.agent.updateMany({
-        where: { id: agentId, userId: user.id },
-        data: {
-          walletId: wallet.id,
-          walletAddress: wallet.address,
-        },
-      });
-    }
 
     return NextResponse.json({
       _id: wallet.id,

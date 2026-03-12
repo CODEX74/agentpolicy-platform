@@ -25,7 +25,7 @@ const t = {
     title: 'Реальный кошелёк агента',
     addressLabel: 'Адрес кошелька',
     networkLabel: 'Сеть',
-    balanceLabel: 'Баланс (raw, тестовый)',
+    balanceLabel: 'Баланс (on-chain, raw wei)',
     copy: 'Скопировать',
     copied: 'Скопировано',
     notCreated: 'Кошелёк ещё не создан. Он создаётся автоматически при создании агента в режиме «Подключить свой кошелёк».',
@@ -50,7 +50,7 @@ const t = {
     title: 'Agent real wallet',
     addressLabel: 'Wallet address',
     networkLabel: 'Network',
-    balanceLabel: 'Balance (raw, test)',
+    balanceLabel: 'Balance (on-chain, raw wei)',
     copy: 'Copy',
     copied: 'Copied',
     notCreated:

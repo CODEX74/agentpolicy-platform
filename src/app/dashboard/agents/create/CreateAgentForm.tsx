@@ -14,6 +14,7 @@ const schema = z.object({
   description: z.string().max(1000).optional(),
   agentType: z.enum(['INVESTOR', 'TRADER']),
   mode: z.enum(['DEMO', 'WALLET']),
+  walletSecret: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -38,6 +39,10 @@ const t = {
     walletAddress: 'Адрес кошелька (0x...)',
     walletAddressPlaceholder: '0x...',
     walletAddressHint: 'Введите адрес вашего EVM-кошелька. Баланс будет отображаться; отправка средств с этого адреса через агента недоступна.',
+      walletSecretLabel: 'Приватный ключ кошелька (полный доступ агента)',
+      walletSecretPlaceholder: 'Приватный ключ 0x... (EVM)',
+      walletSecretWarning:
+        'ВНИМАНИЕ: приватный ключ будет зашифрован и сохранён на сервере. Агент и сервер получат полный доступ к средствам на этом кошельке. Используйте только если полностью доверяете приложению.',
     error: 'Ошибка создания агента',
     creating: 'Создание...',
     submit: 'Создать',
@@ -61,6 +66,10 @@ const t = {
     walletAddress: 'Wallet address (0x...)',
     walletAddressPlaceholder: '0x...',
     walletAddressHint: 'Enter your EVM wallet address. Balance will be shown; sending from this address via the agent is not available.',
+      walletSecretLabel: 'Wallet private key (full agent access)',
+      walletSecretPlaceholder: 'Private key 0x... (EVM)',
+      walletSecretWarning:
+        'WARNING: the private key will be encrypted and stored on the server. The agent and server will have full control over this wallet. Use only if you fully trust the app.',
     error: 'Failed to create agent',
     creating: 'Creating...',
     submit: 'Create',
@@ -79,6 +88,7 @@ export function CreateAgentForm() {
   const [mode, setMode] = useState<'DEMO' | 'WALLET'>('DEMO');
   const [walletSource, setWalletSource] = useState<'new' | 'existing'>('new');
   const [existingWalletAddress, setExistingWalletAddress] = useState('');
+  const [walletSecret, setWalletSecret] = useState('');
 
   const ethAddressRegex = /^0x[a-fA-F0-9]{40}$/;
 
@@ -90,6 +100,7 @@ export function CreateAgentForm() {
       description: description.trim() || undefined,
       agentType,
       mode,
+      walletSecret: walletSecret.trim() || undefined,
     });
     if (!result.success) {
       const first = result.error.issues[0];
@@ -104,9 +115,25 @@ export function CreateAgentForm() {
         return;
       }
     }
+    if (data.mode === 'WALLET' && data.walletSecret) {
+      const cleaned = data.walletSecret.startsWith('0x')
+        ? data.walletSecret.slice(2)
+        : data.walletSecret;
+      if (cleaned.length < 64) {
+        setError(
+          lang === 'ru'
+            ? 'Некорректный приватный ключ. Ожидается ключ формата 0x... (64 hex-символа).'
+            : 'Invalid private key. Expected 0x-prefixed 64-hex EVM key.',
+        );
+        return;
+      }
+    }
     const payload: Record<string, unknown> = { ...data };
     if (data.mode === 'WALLET' && walletSource === 'existing' && existingWalletAddress.trim()) {
       payload.realWalletAddress = existingWalletAddress.trim();
+    }
+    if (data.mode === 'WALLET' && data.walletSecret) {
+      payload.walletSecret = data.walletSecret;
     }
     setIsSubmitting(true);
     try {
@@ -233,6 +260,17 @@ export function CreateAgentForm() {
                     </p>
                   </>
                 )}
+                <div className="mt-3 space-y-1 rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-900 dark:border-red-800 dark:bg-red-950/40 dark:text-red-100">
+                  <div className="text-sm font-semibold">{text.walletSecretLabel}</div>
+                  <p className="mb-1">{text.walletSecretWarning}</p>
+                  <Input
+                    type="password"
+                    value={walletSecret}
+                    onChange={(e) => setWalletSecret(e.target.value)}
+                    placeholder={text.walletSecretPlaceholder}
+                    className="font-mono text-xs"
+                  />
+                </div>
               </div>
             )}
           </div>

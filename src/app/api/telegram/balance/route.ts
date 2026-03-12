@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { getDemoPositions } from '@/lib/db/demo-transactions';
-import { getMarketPrices, getUsdtPriceUsd } from '@/lib/ai/agent-trader';
+import { getMarketPrices } from '@/lib/ai/agent-trader';
 import { getRealWalletBalance } from '@/lib/agents/realWallet';
 import { formatAssetQuantity } from '@/lib/utils/format';
 
@@ -21,10 +21,9 @@ export async function GET(req: NextRequest) {
   if (!userEmail) {
     return NextResponse.json({ text: 'Задайте TELEGRAM_USER_EMAIL в .env.local' });
   }
-  const [userData, marketPrices, usdtPrice] = await Promise.all([
+  const [userData, marketPrices] = await Promise.all([
     prisma.user.findUnique({ where: { email: userEmail } }),
     getMarketPrices(),
-    getUsdtPriceUsd(),
   ]);
   const agents = userData ? await prisma.agent.findMany({ where: { userId: userData.id } }) : [];
   const positionsByAgentId = new Map<
@@ -75,26 +74,32 @@ export async function GET(req: NextRequest) {
   lines.push('💼 Реальные кошельки');
   lines.push('');
 
-  let totalRealUsdt = 0;
+  let totalRealEth = 0;
 
   if (!userData || realAgents.length === 0) {
     lines.push('Нет агентов с реальными кошельками.');
   } else {
-    const ethPriceUsd = marketPrices.ETH ?? usdtPrice ?? 1;
     for (const agent of realAgents) {
       const { balanceWei } = await getRealWalletBalance(agent.id, userData.id);
       const weiNum = Number(balanceWei || '0');
       const balanceEth = Number.isFinite(weiNum) ? weiNum / 1e18 : 0;
-      const balanceUsdt = balanceEth * ethPriceUsd;
-      totalRealUsdt += balanceUsdt;
+      totalRealEth += balanceEth;
+
+      const maxPosEth = agent.realMaxPositionUsd ?? null;
+      const dailyLimitEth = agent.realDailyLimitUsd ?? null;
 
       lines.push(`• ${agent.name}`);
-      lines.push(`  Баланс: ${balanceEth.toFixed(6)} ETH (~ ${balanceUsdt.toFixed(2)} USDT)`);
+      lines.push(`  Баланс: ${balanceEth.toFixed(6)} ETH`);
+      if (maxPosEth != null || dailyLimitEth != null) {
+        lines.push(
+          `  Лимиты: макс позиция ${maxPosEth ?? '-'} ETH / дневной лимит ${dailyLimitEth ?? '-'} ETH`
+        );
+      }
       lines.push('');
     }
   }
 
-  lines.push(`Итого по реальным кошелькам (USDT-экв.): ${totalRealUsdt.toFixed(2)}`);
+  lines.push(`Итого по реальным кошелькам: ${totalRealEth.toFixed(6)} ETH`);
 
   return NextResponse.json({ text: lines.join('\n').slice(0, 4096) });
 }

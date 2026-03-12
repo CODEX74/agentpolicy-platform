@@ -47,7 +47,7 @@ export async function GET() {
     ]);
 
     const agents = user
-      ? await prisma.agent.findMany({ where: { userId: user.id } })
+      ? await prisma.agent.findMany({ where: { userId: user.id, agentMode: 'DEMO' } })
       : [];
 
     const byDay = aggregateByDay(demo);

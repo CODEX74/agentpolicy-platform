@@ -8,27 +8,35 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card';
 const t = {
   ru: {
     title: 'Транзакции',
+    demoTitle: 'Транзакции по демо-балансам',
+    realTitle: 'Транзакции по настоящим балансам',
     whenTitle: 'Когда появятся транзакции?',
     intro: 'Транзакции в списке:',
-    item1: 'каждый запуск агента (ручной или по крону 24/7): hold, buy_coin, sell_coin, transfer и т.д. Отображаются со статусом «Демо».',
+    item1:
+      'каждый запуск агента (ручной или по крону 24/7): hold, buy_coin, sell_coin, transfer и т.д. Отображаются со статусом «Демо».',
     item2: 'Отправка через приложение — кошелёк (CDP), привязка к агенту, перевод через',
     item3: 'События от CDP — вебхук',
     item3b: ', события',
     item3c: 'transaction.completed',
-    demoNote: 'Демо-транзакции агентов отображаются выше. Для реальных переводов нужны CDP-ключи в',
+    demoNote:
+      'Демо-транзакции агентов отображаются в блоке «Транзакции по демо-балансам». Для реальных переводов нужны реальные кошельки / CDP-ключи в',
     agents: 'Агенты',
     dashboard: 'Дашборд',
   },
   en: {
     title: 'Transactions',
+    demoTitle: 'Demo balance transactions',
+    realTitle: 'Real balance transactions',
     whenTitle: 'When will transactions appear?',
     intro: 'Transactions in the list:',
-    item1: 'each agent run (manual or 24/7 cron): hold, buy_coin, sell_coin, transfer, etc. Shown with "Demo" status.',
+    item1:
+      'each agent run (manual or 24/7 cron): hold, buy_coin, sell_coin, transfer, etc. Shown with "Demo" status.',
     item2: 'Sending via app — wallet (CDP), link to agent, transfer via',
     item3: 'Events from CDP — webhook',
     item3b: ', events',
     item3c: 'transaction.completed',
-    demoNote: 'Agent demo transactions appear above. For real transfers you need CDP keys in',
+    demoNote:
+      'Agent demo transactions appear in the "Demo balance transactions" block. For real transfers you need real wallets / CDP keys in',
     agents: 'Agents',
     dashboard: 'Dashboard',
   },
@@ -51,7 +59,13 @@ interface Tx {
   assetPriceUsd?: number;
 }
 
-export function TransactionsPageContent({ transactions }: { transactions: Tx[] }) {
+export function TransactionsPageContent({
+  demoTransactions,
+  realTransactions,
+}: {
+  demoTransactions: Tx[];
+  realTransactions: Tx[];
+}) {
   const lang = useLang();
   const text = t[lang];
   const codeClass = 'rounded bg-zinc-200 px-1 dark:bg-zinc-700';
@@ -59,10 +73,22 @@ export function TransactionsPageContent({ transactions }: { transactions: Tx[] }
   return (
     <>
       <h1 className="text-2xl font-bold">{text.title}</h1>
-      <div className="mt-6">
-        <TransactionTable transactions={transactions} />
+      <div className="mt-6 space-y-8">
+        <section>
+          <h2 className="text-lg font-semibold">{text.demoTitle}</h2>
+          <div className="mt-3">
+            <TransactionTable transactions={demoTransactions} />
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-lg font-semibold">{text.realTitle}</h2>
+          <div className="mt-3">
+            <TransactionTable transactions={realTransactions} />
+          </div>
+        </section>
       </div>
-      {transactions.length === 0 && (
+      {demoTransactions.length === 0 && realTransactions.length === 0 && (
         <Card className="mt-6">
           <CardHeader>
             <h3 className="text-lg font-medium">{text.whenTitle}</h3>

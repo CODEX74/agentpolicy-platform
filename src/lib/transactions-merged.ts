@@ -1,4 +1,5 @@
 import { getDemoTransactionsByEmail } from '@/lib/db/demo-transactions';
+import { prisma } from '@/lib/db/prisma';
 
 export interface UnifiedTransaction {
   _id: string;
@@ -55,3 +56,35 @@ export async function getMergedTransactionsForEmail(
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, limit);
 }
+
+/**
+ * Список реальных транзакций пользователя (для раздела «Транзакции по настоящим балансам»).
+ */
+export async function getRealTransactionsForEmail(
+  email: string,
+  limit = 100
+): Promise<UnifiedTransaction[]> {
+  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+  if (!user) return [];
+
+  const rows = await prisma.realTransaction.findMany({
+    where: { userId: user.id },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+  });
+
+  const mapped: UnifiedTransaction[] = rows.map((t) => ({
+    _id: t.id,
+    type: t.side === 'sell' ? 'sell_coin' : 'buy_coin',
+    amount: t.amountUsd,
+    currency: 'USDT',
+    toAddress: t.walletAddress,
+    status: 'real',
+    createdAt: t.createdAt.toISOString(),
+    isDemo: false,
+    asset: t.asset,
+  }));
+
+  return mapped;
+}
+

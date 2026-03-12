@@ -9,31 +9,37 @@ import { formatAddress } from '@/lib/utils/format';
 import { useLang, withLang } from '@/contexts/LanguageContext';
 import type { Lang } from '@/contexts/LanguageContext';
 
-const t: Record<Lang, {
-  wallet: string;
-  detach: string;
-  transactionsHint: string;
-  transactions: string;
-  transactionsHintAfter: string;
-  sendTransfer: string;
-  recipientPlaceholder: string;
-  send: string;
-  notAttached: string;
-  selectWallet: string;
-  attach: string;
-  orEnterAddress: string;
-  addAndAttach: string;
-  createWallet: string;
-  errLoad: string;
-  errNetwork: string;
-  errAttach: string;
-  errDetach: string;
-  errAddress: string;
-  errAddWallet: string;
-  errAmount: string;
-  errSend: string;
-  errCreate: string;
-}> = {
+const t: Record<
+  Lang,
+  {
+    wallet: string;
+    detach: string;
+    transactionsHint: string;
+    transactions: string;
+    transactionsHintAfter: string;
+    sendTransfer: string;
+    recipientPlaceholder: string;
+    send: string;
+    notAttached: string;
+    selectWallet: string;
+    attach: string;
+    orEnterAddress: string;
+    addAndAttach: string;
+    createWallet: string;
+    connectInjected: string;
+    errLoad: string;
+    errNetwork: string;
+    errAttach: string;
+    errDetach: string;
+    errAddress: string;
+    errAddWallet: string;
+    errAmount: string;
+    errSend: string;
+    errCreate: string;
+    errNoInjectedWallet: string;
+    errInjectedRequest: string;
+  }
+> = {
   ru: {
     wallet: 'Кошелёк',
     detach: 'Отвязать',
@@ -46,9 +52,11 @@ const t: Record<Lang, {
     notAttached: 'Кошелёк не привязан',
     selectWallet: 'Выберите кошелёк',
     attach: 'Привязать',
-    orEnterAddress: 'Или введите адрес кошелька (без CDP)',
+    orEnterAddress:
+      'Подключить существующий кошелёк (Bybit Web3, MetaMask и др.) — введите адрес или импортируйте из браузера',
     addAndAttach: 'Добавить и привязать',
     createWallet: 'Создать кошелёк (CDP)',
+    connectInjected: 'Импортировать из MetaMask / Bybit Web3',
     errLoad: 'Не удалось загрузить кошельки',
     errNetwork: 'Ошибка сети',
     errAttach: 'Не удалось привязать',
@@ -58,6 +66,10 @@ const t: Record<Lang, {
     errAmount: 'Введите корректную сумму (USDT)',
     errSend: 'Не удалось отправить. Нужны CDP-ключи.',
     errCreate: 'Не удалось создать кошелёк. Проверьте настройки CDP в .env.local',
+    errNoInjectedWallet:
+      'Не найден кошелёк в браузере. Установите MetaMask или Bybit Web3 Wallet, либо введите адрес вручную.',
+    errInjectedRequest:
+      'Не удалось получить адрес из кошелька браузера. Проверьте разрешения и попробуйте ещё раз.',
   },
   en: {
     wallet: 'Wallet',
@@ -71,9 +83,11 @@ const t: Record<Lang, {
     notAttached: 'Wallet not linked',
     selectWallet: 'Select wallet',
     attach: 'Attach',
-    orEnterAddress: 'Or enter wallet address (no CDP)',
+    orEnterAddress:
+      'Connect an existing wallet (Bybit Web3, MetaMask, etc.) — enter address or import from browser',
     addAndAttach: 'Add and attach',
     createWallet: 'Create wallet (CDP)',
+    connectInjected: 'Import from MetaMask / Bybit Web3',
     errLoad: 'Failed to load wallets',
     errNetwork: 'Network error',
     errAttach: 'Failed to attach',
@@ -83,6 +97,10 @@ const t: Record<Lang, {
     errAmount: 'Enter a valid amount (USDT)',
     errSend: 'Failed to send. CDP keys required.',
     errCreate: 'Failed to create wallet. Check CDP settings in .env.local',
+    errNoInjectedWallet:
+      'No browser wallet found. Install MetaMask or Bybit Web3 Wallet, or paste the address manually.',
+    errInjectedRequest:
+      'Failed to obtain address from browser wallet. Check permissions and try again.',
   },
 };
 
@@ -216,6 +234,29 @@ export function AgentWalletCard({
       await fetchWallets();
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const handleImportFromInjectedWallet = async () => {
+    try {
+      if (typeof window === 'undefined') return;
+      // MetaMask, Bybit Web3 и другие EVM-кошельки обычно внедряют window.ethereum
+      const eth = (window as unknown as { ethereum?: { request?: (args: { method: string }) => Promise<unknown> } })
+        .ethereum;
+      if (!eth?.request) {
+        setError(text.errNoInjectedWallet);
+        return;
+      }
+      const accounts = (await eth.request({ method: 'eth_requestAccounts' })) as string[] | undefined;
+      const account = accounts?.[0];
+      if (!account) {
+        setError(text.errInjectedRequest);
+        return;
+      }
+      setManualAddress(account);
+      setError(null);
+    } catch {
+      setError(text.errInjectedRequest);
     }
   };
 
@@ -394,6 +435,15 @@ export function AgentWalletCard({
                 onClick={handleAddByAddress}
               >
                 {text.addAndAttach}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={actionLoading}
+                onClick={handleImportFromInjectedWallet}
+              >
+                {text.connectInjected}
               </Button>
             </div>
           </div>

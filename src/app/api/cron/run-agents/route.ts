@@ -423,12 +423,14 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
             ...(hasReal
               ? [
                   '',
-                  '💼 Реальные решения (MVP, без on-chain сделок):',
+                  '💼 Реальные сделки с кошельками:',
                   '',
                   ...grouped.real.flatMap((r, idx) => {
-                    const header = `• ${r.agentName}: ${r.action === 'buy_coin' && r.asset ? `Покупка ${r.asset}` : r.action}`;
+                    const header = `• ${r.agentName}: ${
+                      r.action === 'buy_coin' && r.asset ? `Покупка ${r.asset}` : r.action
+                    }`;
                     const amountLine =
-                      r.amountUsd != null ? `Сумма: ${r.amountUsd.toFixed(2)} USDC` : undefined;
+                      r.amountUsd != null ? `Сумма: ${r.amountUsd.toFixed(4)}` : undefined;
                     const parts = [header];
                     if (amountLine) parts.push(amountLine);
                     if (r.reason) parts.push(`Обоснование: ${r.reason}`);

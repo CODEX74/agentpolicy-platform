@@ -26,14 +26,9 @@ import {
 import { base, baseSepolia, mainnet } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { decryptPrivateKey } from "@/lib/wallets/serverKey";
-import {
-  getTokenAddressByTicker,
-  getSwapCalldataETHToToken,
-  getSwapCalldataTokenToUSDT,
-  getApproveCalldata,
-  getTokenBalance,
-  getTokenDecimals,
-} from "@/lib/dex/uniswap";
+
+/** Принудительно Node.js runtime (viem/DEX не поддерживают Edge). */
+export const runtime = "nodejs";
 
 /**
  * Крон для агентов с run24_7: запускает один цикл принятия решения для каждого такого агента.
@@ -204,7 +199,14 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
           });
           continue;
         }
-        const tokenAddr = getTokenAddressByTicker(decision.asset);
+        const {
+          getTokenAddressByTicker: getTokenAddrByTicker,
+          getSwapCalldataTokenToUSDT: getSwapTokenToUsdt,
+          getApproveCalldata: getApproveCalldataDex,
+          getTokenBalance: getTokenBalanceDex,
+          getTokenDecimals: getTokenDecimalsDex,
+        } = await import("@/lib/dex/uniswap");
+        const tokenAddr = getTokenAddrByTicker(decision.asset);
         if (!tokenAddr) {
           realResults.push({
             agentId: agent.id,
@@ -235,12 +237,12 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
           chain: mainnet,
           transport: http(rpcUrlEth),
         });
-        const balance = await getTokenBalance(
+        const balance = await getTokenBalanceDex(
           publicClientSell,
           tokenAddr,
           agent.realWalletAddress as Address,
         );
-        const decimals = getTokenDecimals(tokenAddr);
+        const decimals = getTokenDecimalsDex(tokenAddr);
         const tokenPriceUsd = marketPrices[decision.asset] ?? 0;
         const amountUsdWorth =
           tokenPriceUsd > 0
@@ -278,7 +280,7 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
           process.env.REAL_TRADE_RECIPIENT ||
           "0x0000000000000000000000000000000000000000";
         try {
-          const swapResult = await getSwapCalldataTokenToUSDT({
+          const swapResult = await getSwapTokenToUsdt({
             tokenIn: tokenAddr,
             amountInWei: sellAmountWei,
             recipient: toAddressSell as Address,
@@ -304,7 +306,7 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
             chain: mainnet,
             transport: http(rpcUrlEth),
           });
-          const approveCalldata = getApproveCalldata(tokenAddr, sellAmountWei);
+          const approveCalldata = getApproveCalldataDex(tokenAddr, sellAmountWei);
           await walletClientSell.sendTransaction({
             to: approveCalldata.to,
             data: approveCalldata.data,
@@ -374,12 +376,12 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
 
       let valueWei = String(BigInt(Math.floor(amount * 1_000_000))); // по умолчанию USDC 6 decimals
       let toAddress = toAddressRecipient;
-      let swapCalldataResult: Awaited<
-        ReturnType<typeof getSwapCalldataETHToToken>
-      > | null = null;
+      let swapCalldataResult: { to: Address; data: `0x${string}`; value: bigint } | null = null;
 
       if (networkId === "ethereum-mainnet" && decision.asset) {
-        const tokenOut = getTokenAddressByTicker(decision.asset);
+        const { getTokenAddressByTicker: getTickerAddr, getSwapCalldataETHToToken: getSwapEthToToken } =
+          await import("@/lib/dex/uniswap");
+        const tokenOut = getTickerAddr(decision.asset);
         if (tokenOut) {
           const amountEth = amount / (ethPriceUsd || 1);
           const valueWeiEth = BigInt(Math.floor(amountEth * 1e18));
@@ -390,7 +392,7 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
             chain: mainnet,
             transport: http(rpcUrlEth),
           });
-          swapCalldataResult = await getSwapCalldataETHToToken({
+          swapCalldataResult = await getSwapEthToToken({
             amountInWei: valueWeiEth,
             tokenOut,
             recipient: toAddressRecipient as Address,

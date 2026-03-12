@@ -95,6 +95,7 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
     reason?: string;
     error?: string;
     asset?: string;
+    amountEth?: number;
     amountUsd?: number;
   }[] = [];
 
@@ -121,6 +122,8 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
       const dailyLimit = agent.realDailyLimitUsd ?? -1;
       const maxPerTx = agent.realMaxPositionUsd ?? -1;
 
+      const ethPriceUsd = usdtPrice || 1;
+
       const input = {
         agentName: agent.name,
         agentType: agent.agentType as 'INVESTOR' | 'TRADER',
@@ -133,7 +136,7 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
         },
         spentTodayEth: spentToday,
         spentWeekEth: spentToday,
-        ethPriceUsd: usdtPrice || 1,
+        ethPriceUsd,
         marketPrices,
         marketTrend,
       };
@@ -166,8 +169,8 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
         continue;
       }
 
-      const allowedByDaily = dailyLimit < 0 || spentToday + amount <= dailyLimit;
-      const allowedByMax = maxPerTx < 0 || amount <= maxPerTx;
+          const allowedByDaily = dailyLimit < 0 || spentToday + amount <= dailyLimit;
+          const allowedByMax = maxPerTx < 0 || amount <= maxPerTx;
       if (!allowedByDaily || !allowedByMax) {
         realResults.push({
           agentId: agent.id,
@@ -317,7 +320,8 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
             action: 'buy_coin',
             reason: decision.reason,
             asset: decision.asset,
-            amountUsd: amount,
+            amountEth: amount,
+            amountUsd: amount * ethPriceUsd,
           });
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
@@ -430,7 +434,9 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
                       r.action === 'buy_coin' && r.asset ? `Покупка ${r.asset}` : r.action
                     }`;
                     const amountLine =
-                      r.amountUsd != null ? `Сумма: ${r.amountUsd.toFixed(4)}` : undefined;
+                      r.amountEth != null && r.amountUsd != null
+                        ? `Сумма: ${r.amountEth.toFixed(4)} ETH (~ ${r.amountUsd.toFixed(2)} USDT)`
+                        : undefined;
                     const parts = [header];
                     if (amountLine) parts.push(amountLine);
                     if (r.reason) parts.push(`Обоснование: ${r.reason}`);

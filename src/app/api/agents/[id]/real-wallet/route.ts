@@ -54,6 +54,7 @@ export async function GET(
       realDailyLimitUsd: agent.realDailyLimitUsd,
       realNotes: agent.realNotes,
       run24_7: agent.run24_7,
+      realTradeRecipient: agent.realTradeRecipient,
     });
   } catch (err) {
     console.error('GET /api/agents/[id]/real-wallet', err);

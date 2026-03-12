@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useLang } from '@/contexts/LanguageContext';
-import type { Lang } from '@/contexts/LanguageContext';
-import { Card, CardContent, CardHeader } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { PendingRealTransactions } from './PendingRealTransactions';
+import { useEffect, useState } from "react";
+import { useLang } from "@/contexts/LanguageContext";
+import type { Lang } from "@/contexts/LanguageContext";
+import { Card, CardContent, CardHeader } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { PendingRealTransactions } from "./PendingRealTransactions";
 
 type RealWalletInfo = {
   address: string | null;
@@ -19,72 +19,74 @@ type RealWalletInfo = {
   realDailyLimitUsd: number | null;
   realNotes: string | null;
   run24_7: boolean;
+  realTradeRecipient?: string | null;
 };
 
 function formatEthFromWei(balanceWei: string): string {
-  if (!balanceWei) return '0';
+  if (!balanceWei) return "0";
   const asNumber = Number(balanceWei);
-  if (!Number.isFinite(asNumber)) return '0';
+  if (!Number.isFinite(asNumber)) return "0";
   const eth = asNumber / 1e18;
   // До 6 знаков, без хвостовых нулей
-  return eth.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
+  return eth.toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
 }
 
 const t = {
   ru: {
-    title: 'Реальный кошелёк агента',
-    addressLabel: 'Адрес кошелька',
-    networkLabel: 'Сеть',
-    balanceLabel: 'Баланс (on-chain, wei / ETH)',
-    copy: 'Скопировать',
-    copied: 'Скопировано',
-    notCreated: 'Кошелёк ещё не создан. Он создаётся автоматически при создании агента в режиме «Подключить свой кошелёк».',
+    title: "Реальный кошелёк агента",
+    addressLabel: "Адрес кошелька",
+    networkLabel: "Сеть",
+    balanceLabel: "Баланс (on-chain, wei / ETH)",
+    copy: "Скопировать",
+    copied: "Скопировано",
+    notCreated:
+      "Кошелёк ещё не создан. Он создаётся автоматически при создании агента в режиме «Подключить свой кошелёк».",
     viewOnlyNotice:
-      'Подключённый кошелёк: агент создаёт заявки на сделки, исполнение — по вашей подписи в кошельке (MetaMask и т.п.) в блоке ниже.',
-    tradingTitle: 'Автотрейдинг реальными средствами',
-    enableLabel: 'Включить торговлю реальными средствами',
-    run247Label: 'Работать 24/7 (крон)',
-    maxPosition: 'Максимальная позиция на один актив, ETH',
-    dailyLimit: 'Дневной лимит по сделкам, ETH',
-    notesLabel: 'Комментарий / предупреждение',
-    save: 'Сохранить настройки',
-    saving: 'Сохранение…',
-    saved: 'Сохранено',
-    errorLoad: 'Не удалось загрузить данные кошелька',
-    errorSave: 'Не удалось сохранить настройки',
-    riskTitle: 'Подтверждение риска',
+      "Подключённый кошелёк: агент создаёт заявки на сделки, исполнение — по вашей подписи в кошельке (MetaMask и т.п.) в блоке ниже.",
+    tradingTitle: "Автотрейдинг реальными средствами",
+    enableLabel: "Включить торговлю реальными средствами",
+    run247Label: "Работать 24/7 (крон)",
+    maxPosition: "Максимальная позиция на один актив, ETH",
+    dailyLimit: "Дневной лимит по сделкам, ETH",
+    notesLabel: "Комментарий / предупреждение",
+    save: "Сохранить настройки",
+    saving: "Сохранение…",
+    saved: "Сохранено",
+    errorLoad: "Не удалось загрузить данные кошелька",
+    errorSave: "Не удалось сохранить настройки",
+    riskTitle: "Подтверждение риска",
     riskText:
-      'Я понимаю, что агент будет совершать реальные сделки с этим кошельком в автоматическом режиме в пределах указанных лимитов.',
-    riskConfirm: 'Я понимаю риск и соглашаюсь с автоматической торговлей.',
-    autoLimits: 'Подобрать лимиты по текущему балансу',
+      "Я понимаю, что агент будет совершать реальные сделки с этим кошельком в автоматическом режиме в пределах указанных лимитов.",
+    riskConfirm: "Я понимаю риск и соглашаюсь с автоматической торговлей.",
+    autoLimits: "Подобрать лимиты по текущему балансу",
   },
   en: {
-    title: 'Agent real wallet',
-    addressLabel: 'Wallet address',
-    networkLabel: 'Network',
-    balanceLabel: 'Balance (on-chain, wei / ETH)',
-    copy: 'Copy',
-    copied: 'Copied',
+    title: "Agent real wallet",
+    addressLabel: "Wallet address",
+    networkLabel: "Network",
+    balanceLabel: "Balance (on-chain, wei / ETH)",
+    copy: "Copy",
+    copied: "Copied",
     notCreated:
-      'Wallet is not created yet. It is created automatically when the agent is created in “Connect your wallet” mode.',
+      "Wallet is not created yet. It is created automatically when the agent is created in “Connect your wallet” mode.",
     viewOnlyNotice:
-      'Connected wallet: the agent creates trade requests; execution requires your signature in the wallet (MetaMask etc.) in the section below.',
-    tradingTitle: 'Autotrading with real funds',
-    enableLabel: 'Enable trading with real funds',
-    run247Label: 'Run 24/7 (cron)',
-    maxPosition: 'Max position per asset, ETH',
-    dailyLimit: 'Daily trading limit, ETH',
-    notesLabel: 'Comment / warning',
-    save: 'Save settings',
-    saving: 'Saving…',
-    saved: 'Saved',
-    errorLoad: 'Failed to load wallet data',
-    errorSave: 'Failed to save settings',
-    riskTitle: 'Risk confirmation',
+      "Connected wallet: the agent creates trade requests; execution requires your signature in the wallet (MetaMask etc.) in the section below.",
+    tradingTitle: "Autotrading with real funds",
+    enableLabel: "Enable trading with real funds",
+    run247Label: "Run 24/7 (cron)",
+    maxPosition: "Max position per asset, ETH",
+    dailyLimit: "Daily trading limit, ETH",
+    notesLabel: "Comment / warning",
+    save: "Save settings",
+    saving: "Saving…",
+    saved: "Saved",
+    errorLoad: "Failed to load wallet data",
+    errorSave: "Failed to save settings",
+    riskTitle: "Risk confirmation",
     riskText:
-      'I understand that the agent will execute real trades from this wallet automatically within the configured limits.',
-    riskConfirm: 'I understand the risk and agree to automatic trading.',
-    autoLimits: 'Auto-set limits from current balance',
+      "I understand that the agent will execute real trades from this wallet automatically within the configured limits.",
+    riskConfirm: "I understand the risk and agree to automatic trading.",
+    autoLimits: "Auto-set limits from current balance",
   },
 };
 
@@ -97,12 +99,21 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [enable, setEnable] = useState(false);
-  const [maxPosition, setMaxPosition] = useState<string>('');
-  const [dailyLimit, setDailyLimit] = useState<string>('');
-  const [notes, setNotes] = useState<string>('');
+  const [maxPosition, setMaxPosition] = useState<string>("");
+  const [dailyLimit, setDailyLimit] = useState<string>("");
+  const [notes, setNotes] = useState<string>("");
   const [riskChecked, setRiskChecked] = useState(false);
   const [copied, setCopied] = useState(false);
   const [run247, setRun247] = useState(false);
+  const [recipient, setRecipient] = useState<string>("");
+  const [recipientError, setRecipientError] = useState<string | null>(null);
+
+  /** Адрес получателя: пусто или 0x + 40 hex-символов */
+  function isValidRecipient(value: string): boolean {
+    const s = (value || "").trim();
+    if (s === "") return true;
+    return /^0x[a-fA-F0-9]{40}$/.test(s);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -112,7 +123,7 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
       try {
         const res = await fetch(`/api/agents/${agentId}/real-wallet`);
         if (!res.ok) {
-          throw new Error('failed');
+          throw new Error("failed");
         }
         const data = (await res.json()) as {
           address: string | null;
@@ -125,6 +136,7 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
           realDailyLimitUsd: number | null;
           realNotes: string | null;
           run24_7?: boolean;
+          realTradeRecipient?: string | null;
         };
         if (cancelled) return;
         const next: RealWalletInfo = {
@@ -141,10 +153,17 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
         };
         setInfo(next);
         setEnable(next.realTradingEnabled);
-        setMaxPosition(next.realMaxPositionUsd != null ? String(next.realMaxPositionUsd) : '');
-        setDailyLimit(next.realDailyLimitUsd != null ? String(next.realDailyLimitUsd) : '');
-        setNotes(next.realNotes ?? '');
+        setMaxPosition(
+          next.realMaxPositionUsd != null
+            ? String(next.realMaxPositionUsd)
+            : "",
+        );
+        setDailyLimit(
+          next.realDailyLimitUsd != null ? String(next.realDailyLimitUsd) : "",
+        );
+        setNotes(next.realNotes ?? "");
         setRun247(next.run24_7);
+        setRecipient(next.realTradeRecipient ?? "");
       } catch {
         if (!cancelled) setError(text.errorLoad);
       } finally {
@@ -170,9 +189,16 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
 
   const handleSave = async () => {
     if (!info) return;
+    setRecipientError(null);
+    setError(null);
+    if (!isValidRecipient(recipient)) {
+      setRecipientError(
+        "Адрес получателя должен быть пустым или в формате 0x и 40 hex-символов (42 символа).",
+      );
+      return;
+    }
     setSaving(true);
     setSaved(false);
-    setError(null);
     try {
       const body: Record<string, unknown> = {
         realTradingEnabled: enable && riskChecked,
@@ -180,14 +206,15 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
       body.realMaxPositionUsd = maxPosition ? Number(maxPosition) : null;
       body.realDailyLimitUsd = dailyLimit ? Number(dailyLimit) : null;
       body.realNotes = notes || null;
+      body.realTradeRecipient = recipient.trim() || null;
 
       const res = await fetch(`/api/agents/${agentId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        throw new Error('failed');
+        throw new Error("failed");
       }
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -204,8 +231,14 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
     const eth = Number(formattedEth);
     if (!Number.isFinite(eth) || eth <= 0) return;
     // Консервативные значения: до 50% на сделку и до 80% в день.
-    const suggestedMax = (eth * 0.5).toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
-    const suggestedDaily = (eth * 0.8).toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+    const suggestedMax = (eth * 0.5)
+      .toFixed(4)
+      .replace(/0+$/, "")
+      .replace(/\.$/, "");
+    const suggestedDaily = (eth * 0.8)
+      .toFixed(4)
+      .replace(/0+$/, "")
+      .replace(/\.$/, "");
     setMaxPosition(suggestedMax);
     setDailyLimit(suggestedDaily);
   };
@@ -214,8 +247,8 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
     setRun247(checked);
     try {
       await fetch(`/api/agents/${agentId}/run24_7`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ run24_7: checked }),
       });
     } catch {
@@ -232,7 +265,9 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
         {loading && <p>{text.saving}</p>}
         {error && <p className="text-red-600 dark:text-red-400">{error}</p>}
         {!loading && info && !info.address && (
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">{text.notCreated}</p>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            {text.notCreated}
+          </p>
         )}
         {!loading && info && info.address && (
           <>
@@ -241,7 +276,12 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
                 <label className="text-xs font-medium uppercase tracking-wide">
                   {text.addressLabel}
                 </label>
-                <Button type="button" size="sm" variant="outline" onClick={handleCopy}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCopy}
+                >
                   {copied ? text.copied : text.copy}
                 </Button>
               </div>
@@ -251,20 +291,21 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide">{text.networkLabel}</p>
+                <p className="text-xs font-medium uppercase tracking-wide">
+                  {text.networkLabel}
+                </p>
                 <p className="text-xs text-zinc-700 dark:text-zinc-300">
-                  {info.network ?? 'base'} / {info.asset ?? 'USDC'}
+                  {info.network ?? "base"} / {info.asset ?? "USDC"}
                 </p>
               </div>
               <div>
-                <p className="text-xs font-medium uppercase tracking-wide">{text.balanceLabel}</p>
+                <p className="text-xs font-medium uppercase tracking-wide">
+                  {text.balanceLabel}
+                </p>
                 <p className="text-xs text-zinc-700 dark:text-zinc-300">
                   {info.balanceWei}
-                  {info.network === 'ethereum-mainnet' && (
-                    <>
-                      {' '}
-                      ({formatEthFromWei(info.balanceWei)} ETH)
-                    </>
+                  {info.network === "ethereum-mainnet" && (
+                    <> ({formatEthFromWei(info.balanceWei)} ETH)</>
                   )}
                 </p>
               </div>
@@ -299,7 +340,9 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
               </label>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-medium">{text.maxPosition}</label>
+                  <label className="mb-1 block text-xs font-medium">
+                    {text.maxPosition}
+                  </label>
                   <Input
                     value={maxPosition}
                     onChange={(e) => setMaxPosition(e.target.value)}
@@ -307,13 +350,34 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium">{text.dailyLimit}</label>
+                  <label className="mb-1 block text-xs font-medium">
+                    {text.dailyLimit}
+                  </label>
                   <Input
                     value={dailyLimit}
                     onChange={(e) => setDailyLimit(e.target.value)}
                     placeholder="500"
                   />
                 </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium">
+                  Адрес получателя для реальных сделок
+                </label>
+                <Input
+                  value={recipient}
+                  onChange={(e) => {
+                    setRecipient(e.target.value);
+                    if (recipientError) setRecipientError(null);
+                  }}
+                  placeholder="0x..."
+                  className={recipientError ? "border-red-500 dark:border-red-500" : ""}
+                />
+                {recipientError && (
+                  <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                    {recipientError}
+                  </p>
+                )}
               </div>
               <div>
                 <Button
@@ -329,8 +393,8 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
               <div
                 className={`mt-2 space-y-1 rounded-md p-3 text-xs dark:bg-amber-900/20 dark:text-amber-100 ${
                   info.isViewOnly
-                    ? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
-                    : 'bg-amber-50 text-amber-900'
+                    ? "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+                    : "bg-amber-50 text-amber-900"
                 }`}
               >
                 <div className="font-semibold">{text.riskTitle}</div>
@@ -366,4 +430,3 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
     </Card>
   );
 }
-

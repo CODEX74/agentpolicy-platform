@@ -14,6 +14,7 @@ const updateAgentSchema = z.object({
   realMaxPositionUsd: z.number().nullable().optional(),
   realDailyLimitUsd: z.number().nullable().optional(),
   realNotes: z.string().max(2000).nullable().optional(),
+  realTradeRecipient: z.string().max(100).nullable().optional(),
 });
 
 function toAgentResponse(a: {
@@ -33,6 +34,7 @@ function toAgentResponse(a: {
   realMaxPositionUsd: number | null;
   realDailyLimitUsd: number | null;
   realNotes: string | null;
+  realTradeRecipient: string | null;
   run24_7: boolean;
 }) {
   return {
@@ -52,6 +54,7 @@ function toAgentResponse(a: {
     realMaxPositionUsd: a.realMaxPositionUsd ?? undefined,
     realDailyLimitUsd: a.realDailyLimitUsd ?? undefined,
     realNotes: a.realNotes ?? undefined,
+    realTradeRecipient: a.realTradeRecipient ?? undefined,
     run24_7: a.run24_7,
   };
 }
@@ -115,6 +118,7 @@ export async function PATCH(
         ...(data.realMaxPositionUsd !== undefined && { realMaxPositionUsd: data.realMaxPositionUsd }),
         ...(data.realDailyLimitUsd !== undefined && { realDailyLimitUsd: data.realDailyLimitUsd }),
         ...(data.realNotes !== undefined && { realNotes: data.realNotes }),
+        ...(data.realTradeRecipient !== undefined && { realTradeRecipient: data.realTradeRecipient }),
       },
     });
     return NextResponse.json(toAgentResponse(updated));

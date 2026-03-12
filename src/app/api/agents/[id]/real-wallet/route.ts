@@ -56,6 +56,7 @@ export async function GET(
       realNotes: agent.realNotes,
       run24_7: agent.run24_7,
       realTradeRecipient: agent.realTradeRecipient,
+      realRiskAccepted: agent.realRiskAccepted,
     });
   } catch (err) {
     console.error('GET /api/agents/[id]/real-wallet', err);

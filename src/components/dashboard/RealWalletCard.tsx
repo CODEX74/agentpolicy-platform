@@ -21,6 +21,7 @@ type RealWalletInfo = {
   realNotes: string | null;
   run24_7: boolean;
   realTradeRecipient?: string | null;
+  realRiskAccepted?: boolean;
 };
 
 function formatEthFromWei(balanceWei: string): string {
@@ -142,6 +143,7 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
           realNotes: string | null;
           run24_7?: boolean;
           realTradeRecipient?: string | null;
+          realRiskAccepted?: boolean;
         };
         if (cancelled) return;
         const next: RealWalletInfo = {
@@ -156,9 +158,12 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
           realDailyLimitUsd: data.realDailyLimitUsd,
           realNotes: data.realNotes,
           run24_7: data.run24_7 ?? false,
+          realTradeRecipient: data.realTradeRecipient ?? null,
+          realRiskAccepted: data.realRiskAccepted ?? false,
         };
         setInfo(next);
         setEnable(next.realTradingEnabled);
+        setRiskChecked(next.realRiskAccepted ?? false);
         setMaxPosition(
           next.realMaxPositionUsd != null
             ? String(next.realMaxPositionUsd)
@@ -219,6 +224,7 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
       body.realDailyLimitUsd = dailyLimit ? Number(dailyLimit) : null;
       body.realNotes = notes || null;
       body.realTradeRecipient = recipient.trim() || null;
+      body.realRiskAccepted = riskChecked;
 
       const res = await fetch(`/api/agents/${agentId}`, {
         method: "PATCH",

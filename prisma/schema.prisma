@@ -101,6 +101,8 @@ model Agent {
   realNotes           String?
   /// Адрес получателя для реальных сделок этого агента (если не задан — используется глобальный REAL_TRADE_RECIPIENT).
   realTradeRecipient  String?
+  /// Пользователь подтвердил риск автоматической торговли (галочка «Я понимаю риск»).
+  realRiskAccepted    Boolean  @default(false)
   run24_7           Boolean  @default(false)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

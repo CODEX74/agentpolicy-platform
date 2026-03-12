@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/prisma';
 import { getDemoPositions } from '@/lib/db/demo-transactions';
-import { getMarketPrices } from '@/lib/ai/agent-trader';
+import { getMarketPrices, getUsdtPriceUsd } from '@/lib/ai/agent-trader';
+import { getRealWalletBalance } from '@/lib/agents/realWallet';
 import { formatAssetQuantity } from '@/lib/utils/format';
 
 /**
@@ -20,26 +21,33 @@ export async function GET(req: NextRequest) {
   if (!userEmail) {
     return NextResponse.json({ text: 'Задайте TELEGRAM_USER_EMAIL в .env.local' });
   }
-  const [userData, marketPrices] = await Promise.all([
+  const [userData, marketPrices, usdtPrice] = await Promise.all([
     prisma.user.findUnique({ where: { email: userEmail } }),
     getMarketPrices(),
+    getUsdtPriceUsd(),
   ]);
-  const agents = userData
-    ? await prisma.agent.findMany({ where: { userId: userData.id } })
-    : [];
-  const positionsByAgentId = new Map<string, { asset: string; quantity: number; avgPriceUsd: number; totalUsdSpent: number }[]>();
-  for (const agent of agents) {
+  const agents = userData ? await prisma.agent.findMany({ where: { userId: userData.id } }) : [];
+  const positionsByAgentId = new Map<
+    string,
+    { asset: string; quantity: number; avgPriceUsd: number; totalUsdSpent: number }[]
+  >();
+
+  const demoAgents = agents.filter((a) => a.agentMode === 'DEMO');
+  const realAgents = agents.filter((a) => a.agentMode === 'WALLET');
+
+  for (const agent of demoAgents) {
     const positions = await getDemoPositions(agent.id, userEmail);
     positionsByAgentId.set(agent.id, positions);
   }
   const lines = ['💰 Демо-баланс', ''];
-  if (agents.length === 0) {
-    return NextResponse.json({ text: '💰 Демо-баланс\n\nНет агентов с демо-балансом.' });
+  if (demoAgents.length === 0) {
+    lines.push('Нет агентов с демо-балансом.');
   }
-  let totalUsdt = 0;
-  for (const agent of agents) {
+
+  let totalDemoUsdt = 0;
+  for (const agent of demoAgents) {
     const balance = agent.demoBalance ?? 0;
-    totalUsdt += balance;
+    totalDemoUsdt += balance;
     const positions = positionsByAgentId.get(agent.id) ?? [];
     lines.push(`• ${agent.name}`);
     lines.push(`  USDT: ${balance}`);
@@ -61,6 +69,33 @@ export async function GET(req: NextRequest) {
     }
     lines.push('');
   }
-  lines.push(`Всего USDT: ${totalUsdt}`);
+
+  lines.push(`Всего USDT по демо: ${totalDemoUsdt.toFixed(2)}`);
+  lines.push('');
+  lines.push('💼 Реальные кошельки');
+  lines.push('');
+
+  let totalRealUsdt = 0;
+
+  if (!userData || realAgents.length === 0) {
+    lines.push('Нет агентов с реальными кошельками.');
+  } else {
+    const ethPriceUsd = marketPrices.ETH ?? usdtPrice ?? 1;
+    for (const agent of realAgents) {
+      const { balanceWei } = await getRealWalletBalance(agent.id, userData.id);
+      const weiNum = Number(balanceWei || '0');
+      const balanceEth = Number.isFinite(weiNum) ? weiNum / 1e18 : 0;
+      const balanceUsdt = balanceEth * ethPriceUsd;
+      totalRealUsdt += balanceUsdt;
+
+      lines.push(`• ${agent.name}`);
+      lines.push(`  Баланс: ${balanceEth.toFixed(6)} ETH (~ ${balanceUsdt.toFixed(2)} USDT)`);
+      lines.push('');
+    }
+  }
+
+  lines.push(`Итого по реальным кошелькам (USDT-экв.): ${totalRealUsdt.toFixed(2)}`);
+
   return NextResponse.json({ text: lines.join('\n').slice(0, 4096) });
 }
+

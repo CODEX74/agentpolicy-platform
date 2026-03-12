@@ -439,7 +439,12 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
                         : undefined;
                     const parts = [header];
                     if (amountLine) parts.push(amountLine);
-                    if (r.reason) parts.push(`Обоснование: ${r.reason}`);
+                    if (r.reason) {
+                      const cleanedReason = r.reason.replace(/[^\p{Script=Cyrillic}\p{N}\p{P}\p{Z}]/gu, '').trim();
+                      if (cleanedReason) {
+                        parts.push(`Обоснование: ${cleanedReason}`);
+                      }
+                    }
                     const block = parts.join('\n');
                     return idx === grouped.real.length - 1 ? [block] : [block, ''];
                   }),

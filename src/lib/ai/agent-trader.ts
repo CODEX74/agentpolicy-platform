@@ -258,17 +258,10 @@ export async function getAgentTradeDecision(
   } catch (e) {
     logger.error('getAgentTradeDecision', e);
     const err = e as { message?: string; status?: number; cause?: { message?: string } };
-    const raw = (err?.message ?? err?.cause?.message ?? '').toLowerCase();
-    let message = 'Не удалось получить решение ИИ.';
-    if (err?.status === 401 || raw.includes('invalid') || raw.includes('api key')) {
-      message = 'Неверный или истёкший OPENAI_API_KEY. Проверьте ключ в .env.local.';
-    } else if (raw.includes('country') || raw.includes('region') || raw.includes('territory') || raw.includes('not supported')) {
-      message = 'OpenAI API недоступен в вашем регионе. Можно использовать VPN или другой провайдер ИИ (см. README).';
-    } else if (err?.message) {
-      message = err.message.length > 120 ? message : err.message;
-    } else if (err?.cause?.message) {
-      message = err.cause.message.length > 120 ? message : err.cause.message;
-    }
-    return { decision: null, error: message };
+    const original =
+      (err?.message ?? err?.cause?.message ?? 'Не удалось получить решение ИИ.').trim();
+    const short =
+      original.length > 160 ? original.slice(0, 157).trimEnd() + '…' : original;
+    return { decision: null, error: short };
   }
 }

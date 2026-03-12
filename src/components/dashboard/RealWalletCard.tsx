@@ -18,6 +18,7 @@ type RealWalletInfo = {
   realMaxPositionUsd: number | null;
   realDailyLimitUsd: number | null;
   realNotes: string | null;
+  run24_7: boolean;
 };
 
 function formatEthFromWei(balanceWei: string): string {
@@ -42,6 +43,7 @@ const t = {
       'Подключённый кошелёк: агент создаёт заявки на сделки, исполнение — по вашей подписи в кошельке (MetaMask и т.п.) в блоке ниже.',
     tradingTitle: 'Автотрейдинг реальными средствами',
     enableLabel: 'Включить торговлю реальными средствами',
+    run247Label: 'Работать 24/7 (крон)',
     maxPosition: 'Максимальная позиция на один актив, ETH',
     dailyLimit: 'Дневной лимит по сделкам, ETH',
     notesLabel: 'Комментарий / предупреждение',
@@ -69,6 +71,7 @@ const t = {
       'Connected wallet: the agent creates trade requests; execution requires your signature in the wallet (MetaMask etc.) in the section below.',
     tradingTitle: 'Autotrading with real funds',
     enableLabel: 'Enable trading with real funds',
+    run247Label: 'Run 24/7 (cron)',
     maxPosition: 'Max position per asset, ETH',
     dailyLimit: 'Daily trading limit, ETH',
     notesLabel: 'Comment / warning',
@@ -99,6 +102,7 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
   const [notes, setNotes] = useState<string>('');
   const [riskChecked, setRiskChecked] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [run247, setRun247] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -120,6 +124,7 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
           realMaxPositionUsd: number | null;
           realDailyLimitUsd: number | null;
           realNotes: string | null;
+          run24_7?: boolean;
         };
         if (cancelled) return;
         const next: RealWalletInfo = {
@@ -132,12 +137,14 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
           realMaxPositionUsd: data.realMaxPositionUsd,
           realDailyLimitUsd: data.realDailyLimitUsd,
           realNotes: data.realNotes,
+          run24_7: data.run24_7 ?? false,
         };
         setInfo(next);
         setEnable(next.realTradingEnabled);
         setMaxPosition(next.realMaxPositionUsd != null ? String(next.realMaxPositionUsd) : '');
         setDailyLimit(next.realDailyLimitUsd != null ? String(next.realDailyLimitUsd) : '');
         setNotes(next.realNotes ?? '');
+        setRun247(next.run24_7);
       } catch {
         if (!cancelled) setError(text.errorLoad);
       } finally {
@@ -201,6 +208,19 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
     const suggestedDaily = (eth * 0.8).toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
     setMaxPosition(suggestedMax);
     setDailyLimit(suggestedDaily);
+  };
+
+  const handleToggleRun247 = async (checked: boolean) => {
+    setRun247(checked);
+    try {
+      await fetch(`/api/agents/${agentId}/run24_7`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ run24_7: checked }),
+      });
+    } catch {
+      // ignore, UI already updated optimistically
+    }
   };
 
   return (
@@ -268,6 +288,14 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
                   onChange={(e) => setEnable(e.target.checked)}
                 />
                 <span>{text.enableLabel}</span>
+              </label>
+              <label className="flex items-start gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={run247}
+                  onChange={(e) => handleToggleRun247(e.target.checked)}
+                />
+                <span>{text.run247Label}</span>
               </label>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>

@@ -53,6 +53,7 @@ export async function GET(
       realMaxPositionUsd: agent.realMaxPositionUsd,
       realDailyLimitUsd: agent.realDailyLimitUsd,
       realNotes: agent.realNotes,
+      run24_7: agent.run24_7,
     });
   } catch (err) {
     console.error('GET /api/agents/[id]/real-wallet', err);

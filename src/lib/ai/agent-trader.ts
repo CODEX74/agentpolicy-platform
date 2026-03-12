@@ -164,12 +164,14 @@ ${styleBlock}
 Уже потрачено сегодня: ${input.spentTodayEth} USDT, за неделю: ${input.spentWeekEth} USDT.
 
 Рынок (цены в USD): ${pricesLine}. Тренд: ${input.marketTrend}.
-
+        
 Действия: buy_coin (купить криптоактив за USDT — только ETH, BTC, SOL и т.д., не USDT), sell_coin (продать), transfer (перевод), hold (ничего не делать).
 При buy_coin обязательно укажи: amountEth, asset (тикер крипты: ETH, BTC, SOL… не USDT), reason, priceReason, plans, и горизонт (ИНВЕСТОР: termDays>=10; ТРЕЙДЕР: termMinutes 5–30).
 При sell_coin обязательно укажи: asset, reason, priceReason, plans (почему закрываешь позицию и что дальше).
 При hold всегда пиши развёрнутое обоснование (reason): почему не покупаешь, что ждёшь, какие уровни или условия важны.
 
+Все текстовые поля (reason, priceReason, plans) пиши ТОЛЬКО на чистом русском языке, без английских слов, без других алфавитов, без эмодзи и спецсимволов. Коротко и понятно, 1–2 предложения.
+        
 Ответь только одним JSON-объектом, без markdown. Примеры:
 {"action":"hold","reason":"Ожидаю коррекции к поддержке $95k по BTC; текущая перекупленность, не добавляю в лонг до отката."}
 {"action":"buy_coin","amountEth":20,"asset":"BTC","reason":"Диверсификация на коррекции","priceReason":"Цена откатила от ATH, покупаю на поддержке","termDays":30,"plans":"Перепродажа через месяц при росте на 5-10%"}

@@ -450,9 +450,11 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
                     const parts = [header];
                     if (amountLine) parts.push(amountLine);
                     if (r.reason) {
-                      const cleanedReason = r.reason.replace(/[^\p{Script=Cyrillic}\p{N}\p{P}\p{Z}]/gu, '').trim();
-                      if (cleanedReason) {
-                        parts.push(`Обоснование: ${cleanedReason}`);
+                      const onlyRu = r.reason.replace(/[^0-9А-Яа-яЁё.,:;!?()\-\\s]/g, ' ');
+                      const normalized = onlyRu.replace(/\s+/g, ' ').trim();
+                      const hasRu = /[А-Яа-яЁё]/.test(normalized);
+                      if (hasRu && normalized.length >= 10) {
+                        parts.push(`Обоснование: ${normalized}`);
                       }
                     }
                     const block = parts.join('\n');

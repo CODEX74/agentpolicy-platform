@@ -12,6 +12,7 @@ const updateAgentSchema = z.object({
   mode: z.enum(['DEMO', 'WALLET']).optional(),
   realTradingEnabled: z.boolean().optional(),
   realMaxPositionUsd: z.number().nullable().optional(),
+  realMinPositionUsd: z.number().nullable().optional(),
   realDailyLimitUsd: z.number().nullable().optional(),
   realNotes: z.string().max(2000).nullable().optional(),
   realTradeRecipient: z.string().max(100).nullable().optional(),
@@ -32,6 +33,7 @@ function toAgentResponse(a: {
   realWalletAsset: string | null;
   realTradingEnabled: boolean;
   realMaxPositionUsd: number | null;
+  realMinPositionUsd: number | null;
   realDailyLimitUsd: number | null;
   realNotes: string | null;
   realTradeRecipient: string | null;
@@ -52,6 +54,7 @@ function toAgentResponse(a: {
     realWalletAsset: a.realWalletAsset ?? undefined,
     realTradingEnabled: a.realTradingEnabled,
     realMaxPositionUsd: a.realMaxPositionUsd ?? undefined,
+    realMinPositionUsd: a.realMinPositionUsd ?? undefined,
     realDailyLimitUsd: a.realDailyLimitUsd ?? undefined,
     realNotes: a.realNotes ?? undefined,
     realTradeRecipient: a.realTradeRecipient ?? undefined,
@@ -116,6 +119,7 @@ export async function PATCH(
         ...(data.mode != null && { agentMode: data.mode }),
         ...(data.realTradingEnabled != null && { realTradingEnabled: data.realTradingEnabled }),
         ...(data.realMaxPositionUsd !== undefined && { realMaxPositionUsd: data.realMaxPositionUsd }),
+        ...(data.realMinPositionUsd !== undefined && { realMinPositionUsd: data.realMinPositionUsd }),
         ...(data.realDailyLimitUsd !== undefined && { realDailyLimitUsd: data.realDailyLimitUsd }),
         ...(data.realNotes !== undefined && { realNotes: data.realNotes }),
         ...(data.realTradeRecipient !== undefined && { realTradeRecipient: data.realTradeRecipient }),

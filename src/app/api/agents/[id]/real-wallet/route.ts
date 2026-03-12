@@ -51,6 +51,7 @@ export async function GET(
       isViewOnly,
       realTradingEnabled: agent.realTradingEnabled,
       realMaxPositionUsd: agent.realMaxPositionUsd,
+      realMinPositionUsd: agent.realMinPositionUsd,
       realDailyLimitUsd: agent.realDailyLimitUsd,
       realNotes: agent.realNotes,
       run24_7: agent.run24_7,

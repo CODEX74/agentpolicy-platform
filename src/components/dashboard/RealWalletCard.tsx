@@ -16,6 +16,7 @@ type RealWalletInfo = {
   isViewOnly: boolean;
   realTradingEnabled: boolean;
   realMaxPositionUsd: number | null;
+  realMinPositionUsd: number | null;
   realDailyLimitUsd: number | null;
   realNotes: string | null;
   run24_7: boolean;
@@ -46,8 +47,9 @@ const t = {
     tradingTitle: "Автотрейдинг реальными средствами",
     enableLabel: "Включить торговлю реальными средствами",
     run247Label: "Работать 24/7 (крон)",
-    maxPosition: "Максимальная позиция на один актив, ETH",
-    dailyLimit: "Дневной лимит по сделкам, ETH",
+    maxPosition: "Максимальная позиция на один актив, USD",
+    minPosition: "Минимум за транзакцию, USD",
+    dailyLimit: "Дневной лимит по сделкам, USD",
     notesLabel: "Комментарий / предупреждение",
     save: "Сохранить настройки",
     saving: "Сохранение…",
@@ -74,8 +76,9 @@ const t = {
     tradingTitle: "Autotrading with real funds",
     enableLabel: "Enable trading with real funds",
     run247Label: "Run 24/7 (cron)",
-    maxPosition: "Max position per asset, ETH",
-    dailyLimit: "Daily trading limit, ETH",
+    maxPosition: "Max position per asset, USD",
+    minPosition: "Minimum per transaction, USD",
+    dailyLimit: "Daily trading limit, USD",
     notesLabel: "Comment / warning",
     save: "Save settings",
     saving: "Saving…",
@@ -100,6 +103,7 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
   const [saved, setSaved] = useState(false);
   const [enable, setEnable] = useState(false);
   const [maxPosition, setMaxPosition] = useState<string>("");
+  const [minPosition, setMinPosition] = useState<string>("");
   const [dailyLimit, setDailyLimit] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [riskChecked, setRiskChecked] = useState(false);
@@ -133,6 +137,7 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
           isViewOnly?: boolean;
           realTradingEnabled: boolean;
           realMaxPositionUsd: number | null;
+          realMinPositionUsd: number | null;
           realDailyLimitUsd: number | null;
           realNotes: string | null;
           run24_7?: boolean;
@@ -147,6 +152,7 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
           isViewOnly: data.isViewOnly ?? false,
           realTradingEnabled: data.realTradingEnabled,
           realMaxPositionUsd: data.realMaxPositionUsd,
+          realMinPositionUsd: data.realMinPositionUsd,
           realDailyLimitUsd: data.realDailyLimitUsd,
           realNotes: data.realNotes,
           run24_7: data.run24_7 ?? false,
@@ -156,6 +162,11 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
         setMaxPosition(
           next.realMaxPositionUsd != null
             ? String(next.realMaxPositionUsd)
+            : "",
+        );
+        setMinPosition(
+          next.realMinPositionUsd != null
+            ? String(next.realMinPositionUsd)
             : "",
         );
         setDailyLimit(
@@ -204,6 +215,7 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
         realTradingEnabled: enable && riskChecked,
       };
       body.realMaxPositionUsd = maxPosition ? Number(maxPosition) : null;
+      body.realMinPositionUsd = minPosition ? Number(minPosition) : null;
       body.realDailyLimitUsd = dailyLimit ? Number(dailyLimit) : null;
       body.realNotes = notes || null;
       body.realTradeRecipient = recipient.trim() || null;
@@ -338,7 +350,7 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
                 />
                 <span>{text.run247Label}</span>
               </label>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div>
                   <label className="mb-1 block text-xs font-medium">
                     {text.maxPosition}
@@ -347,6 +359,16 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
                     value={maxPosition}
                     onChange={(e) => setMaxPosition(e.target.value)}
                     placeholder="100"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium">
+                    {text.minPosition}
+                  </label>
+                  <Input
+                    value={minPosition}
+                    onChange={(e) => setMinPosition(e.target.value)}
+                    placeholder="10"
                   />
                 </div>
                 <div>

@@ -106,6 +106,7 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
       const spentToday = agg._sum.amountUsd ?? 0;
       const dailyLimit = agent.realDailyLimitUsd ?? -1;
       const maxPerTx = agent.realMaxPositionUsd ?? -1;
+      const minPerTx = agent.realMinPositionUsd ?? 0;
 
       const ethPriceUsd = usdtPrice || 1;
 
@@ -162,6 +163,17 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
           userEmail,
           action: "hold",
           reason: `Решение отклонено по лимитам real-wallet. ${decision.reason}`,
+          asset: decision.asset,
+        });
+        continue;
+      }
+      if (minPerTx > 0 && amount < minPerTx) {
+        realResults.push({
+          agentId: agent.id,
+          agentName: agent.name,
+          userEmail,
+          action: "hold",
+          reason: `Сумма ${amount.toFixed(2)} USD ниже минимума за транзакцию (${minPerTx} USD). ${decision.reason}`,
           asset: decision.asset,
         });
         continue;

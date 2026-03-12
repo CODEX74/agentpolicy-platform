@@ -96,6 +96,7 @@ model Agent {
   realWalletAsset     String?  @default("USDC")
   realTradingEnabled  Boolean  @default(false)
   realMaxPositionUsd  Float?
+  realMinPositionUsd  Float?   /// Минимум за одну транзакцию (USD); сделки ниже не выполняются.
   realDailyLimitUsd   Float?
   realNotes           String?
   /// Адрес получателя для реальных сделок этого агента (если не задан — используется глобальный REAL_TRADE_RECIPIENT).

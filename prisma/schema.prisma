@@ -137,6 +137,9 @@ model Wallet {
   address     String
   networkId   String   @default("base-sepolia")
   cdpWalletId String?
+  /// Зашифрованный приватный ключ (для полного серверного контроля над кошельком).
+  /// Шифруется с помощью WALLET_ENCRYPTION_KEY или NEXTAUTH_SECRET.
+  serverPrivateKey String? @map("server_private_key")
   isDefault   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

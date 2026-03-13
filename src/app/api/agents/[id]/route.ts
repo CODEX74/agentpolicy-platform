@@ -12,7 +12,7 @@ const updateAgentSchema = z.object({
   mode: z.enum(['DEMO', 'WALLET']).optional(),
   realTradingEnabled: z.boolean().optional(),
   realMaxPositionUsd: z.number().nullable().optional(),
-  realMinPositionUsd: z.number().nullable().optional(),
+  realMinPositionUsd: z.number().min(1).nullable().optional(),
   realDailyLimitUsd: z.number().nullable().optional(),
   realNotes: z.string().max(2000).nullable().optional(),
   realTradeRecipient: z.string().max(100).nullable().optional(),

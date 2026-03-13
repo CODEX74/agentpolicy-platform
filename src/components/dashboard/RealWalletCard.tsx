@@ -220,7 +220,8 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
         realTradingEnabled: enable && riskChecked,
       };
       body.realMaxPositionUsd = maxPosition ? Number(maxPosition) : null;
-      body.realMinPositionUsd = minPosition ? Number(minPosition) : null;
+      const minPosNum = minPosition ? Math.max(1, Number(minPosition)) : null;
+      body.realMinPositionUsd = minPosNum;
       body.realDailyLimitUsd = dailyLimit ? Number(dailyLimit) : null;
       body.realNotes = notes || null;
       body.realTradeRecipient = recipient.trim() || null;
@@ -374,7 +375,10 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
                   <Input
                     value={minPosition}
                     onChange={(e) => setMinPosition(e.target.value)}
-                    placeholder="10"
+                    placeholder="1"
+                    type="number"
+                    min={1}
+                    step="0.01"
                   />
                 </div>
                 <div>

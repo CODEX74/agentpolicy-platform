@@ -168,15 +168,24 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
         continue;
       }
       if (minPerTx > 0 && amount < minPerTx) {
-        realResults.push({
-          agentId: agent.id,
-          agentName: agent.name,
-          userEmail,
-          action: "hold",
-          reason: `Сумма ${amount.toFixed(2)} USD ниже минимума за транзакцию (${minPerTx} USD). ${decision.reason}`,
-          asset: decision.asset,
-        });
-        continue;
+        // Поднимаем размер сделки до минимума, если позволяют лимиты.
+        const maxAllowed =
+          Math.min(
+            maxPerTx > 0 ? maxPerTx : Infinity,
+            remainingDaily > 0 ? remainingDaily : Infinity,
+          ) || minPerTx;
+        amount = Math.min(minPerTx, maxAllowed);
+        if (amount < minPerTx || amount <= 0) {
+          realResults.push({
+            agentId: agent.id,
+            agentName: agent.name,
+            userEmail,
+            action: "hold",
+            reason: `Лимиты не позволяют открыть сделку даже на минимум ${minPerTx} USD. ${decision.reason}`,
+            asset: decision.asset,
+          });
+          continue;
+        }
       }
 
       // ——— sell_coin: только Ethereum mainnet, DEX TOKEN → USDT ———
@@ -390,29 +399,62 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
       let toAddress = toAddressRecipient;
       let swapCalldataResult: { to: Address; data: `0x${string}`; value: bigint } | null = null;
 
-      if (networkId === "ethereum-mainnet" && decision.asset) {
-        const { getTokenAddressByTicker: getTickerAddr, getSwapCalldataETHToToken: getSwapEthToToken } =
-          await import("@/lib/dex/uniswap");
-        const tokenOut = getTickerAddr(decision.asset);
-        if (tokenOut) {
-          const amountEth = amount / (ethPriceUsd || 1);
-          const valueWeiEth = BigInt(Math.floor(amountEth * 1e18));
-          const rpcUrlEth =
-            process.env.ETHEREUM_RPC_URL ??
-            "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID";
-          const publicClientEth = createPublicClient({
-            chain: mainnet,
-            transport: http(rpcUrlEth),
+      if (networkId === "ethereum-mainnet") {
+        if (!decision.asset) {
+          realResults.push({
+            agentId: agent.id,
+            agentName: agent.name,
+            userEmail,
+            action: "hold",
+            reason: `Для торговли в Ethereum mainnet агент должен выбрать конкретный токен (кроме ETH). ${decision.reason}`,
+            asset: decision.asset,
           });
-          swapCalldataResult = await getSwapEthToToken({
-            amountInWei: valueWeiEth,
-            tokenOut,
-            recipient: toAddressRecipient as Address,
-            publicClient: publicClientEth,
-          });
-          toAddress = swapCalldataResult.to;
-          valueWei = String(swapCalldataResult.value);
+          continue;
         }
+        const {
+          getTokenAddressByTicker: getTickerAddr,
+          getSwapCalldataETHToToken: getSwapEthToToken,
+        } = await import("@/lib/dex/uniswap");
+        if (decision.asset === "ETH" || decision.asset === "WETH") {
+          realResults.push({
+            agentId: agent.id,
+            agentName: agent.name,
+            userEmail,
+            action: "hold",
+            reason: `Покупка ETH за ETH не выполняется. Агент будет ждать возможности купить альткоин (BTC, SOL, AVAX и т.п.). ${decision.reason}`,
+            asset: decision.asset,
+          });
+          continue;
+        }
+        const tokenOut = getTickerAddr(decision.asset);
+        if (!tokenOut) {
+          realResults.push({
+            agentId: agent.id,
+            agentName: agent.name,
+            userEmail,
+            action: "hold",
+            reason: `Токен ${decision.asset} не поддерживается для DEX-свапов на Ethereum mainnet. ${decision.reason}`,
+            asset: decision.asset,
+          });
+          continue;
+        }
+        const amountEth = amount / (ethPriceUsd || 1);
+        const valueWeiEth = BigInt(Math.floor(amountEth * 1e18));
+        const rpcUrlEth =
+          process.env.ETHEREUM_RPC_URL ??
+          "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID";
+        const publicClientEth = createPublicClient({
+          chain: mainnet,
+          transport: http(rpcUrlEth),
+        });
+        swapCalldataResult = await getSwapEthToToken({
+          amountInWei: valueWeiEth,
+          tokenOut,
+          recipient: toAddressRecipient as Address,
+          publicClient: publicClientEth,
+        });
+        toAddress = swapCalldataResult.to;
+        valueWei = String(swapCalldataResult.value);
       }
 
       if (isConnectedWallet) {

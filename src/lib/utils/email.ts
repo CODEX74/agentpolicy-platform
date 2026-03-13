@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 
-const EMAIL_TO = process.env.LOG_EMAIL_TO || 'rusakvtl666@gmail.com';
+// Почта для логов по умолчанию. Можно переопределить через LOG_EMAIL_TO.
+const EMAIL_TO = process.env.LOG_EMAIL_TO || 'agengpolicywallet@gmail.com';
 
 let transporter: nodemailer.Transporter | null = null;
 
@@ -24,8 +25,17 @@ export async function sendLogEmail(subject: string, text: string) {
       subject,
       text,
     });
-  } catch {
-    // don't crash logger on email errors
+    // диагностический лог об успешной отправке
+    console.log('[AgentWallet email] sent', { to: EMAIL_TO, subject });
+  } catch (err) {
+    // логируем причину, но не падаем
+    console.error('[AgentWallet email] sendLogEmail failed', {
+      to: EMAIL_TO,
+      error:
+        err instanceof Error
+          ? { message: err.message, name: err.name }
+          : String(err),
+    });
   }
 }
 

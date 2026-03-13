@@ -12,6 +12,9 @@ const WETH: Address = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
 const USDT: Address = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
 const UNISWAP_V2_ROUTER: Address = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D";
 
+// Wormhole WAVAX на Ethereum mainnet
+const WAVAX_ETH: Address = "0x85f138bfEE4ef8e540890CFb48F620571d67Eda3" as Address;
+
 /** Тикер → адрес ERC-20 на Ethereum mainnet (топ токены с ликвидностью на Uniswap V2). */
 export const ETHEREUM_TOKEN_WHITELIST: Record<string, Address> = {
   ETH: WETH,
@@ -23,6 +26,7 @@ export const ETHEREUM_TOKEN_WHITELIST: Record<string, Address> = {
   DAI: "0x6B175474E89094C44Da98b954Eedeac495271d0F" as Address,
   UNI: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984" as Address,
   LINK: "0x514910771AF9Ca656af840dff83E8264EcF986CA" as Address,
+  AVAX: WAVAX_ETH, // Wrapped AVAX (Wormhole) на Ethereum mainnet
 };
 
 /** Decimals по адресу токена (lowercase). */
@@ -34,6 +38,7 @@ export const ETHEREUM_TOKEN_DECIMALS: Record<string, number> = {
   "0x6b175474e89094c44da98b954eedeac495271d0f": 18, // DAI
   "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984": 18, // UNI
   "0x514910771af9ca656af840dff83e8264ecf986ca": 18, // LINK
+  [WAVAX_ETH.toLowerCase()]: 18, // WAVAX (Wormhole)
 };
 
 const ROUTER_ABI = parseAbi([

@@ -14,6 +14,7 @@ const updateAgentSchema = z.object({
   realMaxPositionUsd: z.number().nullable().optional(),
   realMinPositionUsd: z.number().min(1).nullable().optional(),
   realDailyLimitUsd: z.number().nullable().optional(),
+  realMinTransactionsPerHour: z.number().int().min(0).nullable().optional(),
   realNotes: z.string().max(2000).nullable().optional(),
   realTradeRecipient: z.string().max(100).nullable().optional(),
   realRiskAccepted: z.boolean().optional(),
@@ -36,6 +37,7 @@ function toAgentResponse(a: {
   realMaxPositionUsd: number | null;
   realMinPositionUsd: number | null;
   realDailyLimitUsd: number | null;
+  realMinTransactionsPerHour: number | null;
   realNotes: string | null;
   realTradeRecipient: string | null;
   realRiskAccepted: boolean;
@@ -58,6 +60,7 @@ function toAgentResponse(a: {
     realMaxPositionUsd: a.realMaxPositionUsd ?? undefined,
     realMinPositionUsd: a.realMinPositionUsd ?? undefined,
     realDailyLimitUsd: a.realDailyLimitUsd ?? undefined,
+    realMinTransactionsPerHour: a.realMinTransactionsPerHour ?? undefined,
     realNotes: a.realNotes ?? undefined,
     realTradeRecipient: a.realTradeRecipient ?? undefined,
     realRiskAccepted: a.realRiskAccepted,
@@ -124,6 +127,7 @@ export async function PATCH(
         ...(data.realMaxPositionUsd !== undefined && { realMaxPositionUsd: data.realMaxPositionUsd }),
         ...(data.realMinPositionUsd !== undefined && { realMinPositionUsd: data.realMinPositionUsd }),
         ...(data.realDailyLimitUsd !== undefined && { realDailyLimitUsd: data.realDailyLimitUsd }),
+        ...(data.realMinTransactionsPerHour !== undefined && { realMinTransactionsPerHour: data.realMinTransactionsPerHour }),
         ...(data.realNotes !== undefined && { realNotes: data.realNotes }),
         ...(data.realTradeRecipient !== undefined && { realTradeRecipient: data.realTradeRecipient }),
         ...(data.realRiskAccepted !== undefined && { realRiskAccepted: data.realRiskAccepted }),

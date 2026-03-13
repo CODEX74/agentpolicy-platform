@@ -108,6 +108,28 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
       const maxPerTx = agent.realMaxPositionUsd ?? -1;
       const minPerTx = agent.realMinPositionUsd ?? 0;
 
+      const maxTxPerHour = agent.realMinTransactionsPerHour ?? -1;
+      if (maxTxPerHour >= 0) {
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        const countLastHour = await prisma.realTransaction.count({
+          where: {
+            agentId: agent.id,
+            userId: agent.user.id,
+            createdAt: { gte: oneHourAgo },
+          },
+        });
+        if (countLastHour >= maxTxPerHour) {
+          realResults.push({
+            agentId: agent.id,
+            agentName: agent.name,
+            userEmail,
+            action: "hold",
+            reason: `Достигнут лимит транзакций за час (${countLastHour}/${maxTxPerHour}).`,
+          });
+          continue;
+        }
+      }
+
       // Цена ETH в USD: сначала берём из marketPrices, затем из usdtPrice, в крайнем случае 1.
       const ethPriceUsd = marketPrices.ETH ?? usdtPrice ?? 1;
 

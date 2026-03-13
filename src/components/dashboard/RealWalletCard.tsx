@@ -18,6 +18,7 @@ type RealWalletInfo = {
   realMaxPositionUsd: number | null;
   realMinPositionUsd: number | null;
   realDailyLimitUsd: number | null;
+  realMinTransactionsPerHour: number | null;
   realNotes: string | null;
   run24_7: boolean;
   realTradeRecipient?: string | null;
@@ -51,6 +52,8 @@ const t = {
     maxPosition: "Максимальная позиция на один актив, USD",
     minPosition: "Минимум за транзакцию, USD",
     dailyLimit: "Дневной лимит по сделкам, USD",
+    minTxPerHour: "Минимальное кол-во транзакций в час",
+    limitsBlockTitle: "Лимиты по сделкам",
     notesLabel: "Комментарий / предупреждение",
     save: "Сохранить настройки",
     saving: "Сохранение…",
@@ -80,6 +83,8 @@ const t = {
     maxPosition: "Max position per asset, USD",
     minPosition: "Minimum per transaction, USD",
     dailyLimit: "Daily trading limit, USD",
+    minTxPerHour: "Min. transactions per hour",
+    limitsBlockTitle: "Trading limits",
     notesLabel: "Comment / warning",
     save: "Save settings",
     saving: "Saving…",
@@ -106,6 +111,7 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
   const [maxPosition, setMaxPosition] = useState<string>("");
   const [minPosition, setMinPosition] = useState<string>("");
   const [dailyLimit, setDailyLimit] = useState<string>("");
+  const [minTxPerHour, setMinTxPerHour] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [riskChecked, setRiskChecked] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -140,6 +146,7 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
           realMaxPositionUsd: number | null;
           realMinPositionUsd: number | null;
           realDailyLimitUsd: number | null;
+          realMinTransactionsPerHour?: number | null;
           realNotes: string | null;
           run24_7?: boolean;
           realTradeRecipient?: string | null;
@@ -156,6 +163,7 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
           realMaxPositionUsd: data.realMaxPositionUsd,
           realMinPositionUsd: data.realMinPositionUsd,
           realDailyLimitUsd: data.realDailyLimitUsd,
+          realMinTransactionsPerHour: data.realMinTransactionsPerHour ?? null,
           realNotes: data.realNotes,
           run24_7: data.run24_7 ?? false,
           realTradeRecipient: data.realTradeRecipient ?? null,
@@ -176,6 +184,11 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
         );
         setDailyLimit(
           next.realDailyLimitUsd != null ? String(next.realDailyLimitUsd) : "",
+        );
+        setMinTxPerHour(
+          next.realMinTransactionsPerHour != null
+            ? String(next.realMinTransactionsPerHour)
+            : "",
         );
         setNotes(next.realNotes ?? "");
         setRun247(next.run24_7);
@@ -223,6 +236,10 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
       const minPosNum = minPosition ? Math.max(1, Number(minPosition)) : null;
       body.realMinPositionUsd = minPosNum;
       body.realDailyLimitUsd = dailyLimit ? Number(dailyLimit) : null;
+      const minTxPerHourNum = minTxPerHour
+        ? Math.max(0, Math.floor(Number(minTxPerHour)))
+        : null;
+      body.realMinTransactionsPerHour = minTxPerHourNum;
       body.realNotes = notes || null;
       body.realTradeRecipient = recipient.trim() || null;
       body.realRiskAccepted = riskChecked;
@@ -357,39 +374,57 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
                 />
                 <span>{text.run247Label}</span>
               </label>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium">
-                    {text.maxPosition}
-                  </label>
-                  <Input
-                    value={maxPosition}
-                    onChange={(e) => setMaxPosition(e.target.value)}
-                    placeholder="100"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium">
-                    {text.minPosition}
-                  </label>
-                  <Input
-                    value={minPosition}
-                    onChange={(e) => setMinPosition(e.target.value)}
-                    placeholder="1"
-                    type="number"
-                    min={1}
-                    step="0.01"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium">
-                    {text.dailyLimit}
-                  </label>
-                  <Input
-                    value={dailyLimit}
-                    onChange={(e) => setDailyLimit(e.target.value)}
-                    placeholder="500"
-                  />
+              <div className="rounded-lg border border-zinc-200 bg-zinc-50/50 p-4 dark:border-zinc-700 dark:bg-zinc-900/50">
+                <h4 className="mb-3 text-sm font-semibold text-zinc-800 dark:text-zinc-200">
+                  {text.limitsBlockTitle}
+                </h4>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium">
+                      {text.maxPosition}
+                    </label>
+                    <Input
+                      value={maxPosition}
+                      onChange={(e) => setMaxPosition(e.target.value)}
+                      placeholder="100"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium">
+                      {text.minPosition}
+                    </label>
+                    <Input
+                      value={minPosition}
+                      onChange={(e) => setMinPosition(e.target.value)}
+                      placeholder="1"
+                      type="number"
+                      min={1}
+                      step="0.01"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium">
+                      {text.dailyLimit}
+                    </label>
+                    <Input
+                      value={dailyLimit}
+                      onChange={(e) => setDailyLimit(e.target.value)}
+                      placeholder="500"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium">
+                      {text.minTxPerHour}
+                    </label>
+                    <Input
+                      value={minTxPerHour}
+                      onChange={(e) => setMinTxPerHour(e.target.value)}
+                      placeholder="—"
+                      type="number"
+                      min={0}
+                      step={1}
+                    />
+                  </div>
                 </div>
               </div>
               <div>

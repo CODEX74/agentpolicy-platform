@@ -32,7 +32,11 @@ export async function GET(req: NextRequest) {
   >();
 
   const demoAgents = agents.filter((a) => a.agentMode === 'DEMO');
-  const realAgents = agents.filter((a) => a.agentMode === 'WALLET');
+  // Реальными считаем как классические WALLET-агенты, так и тех,
+  // у кого уже есть привязанный realWalletAddress (на случай старых агентов).
+  const realAgents = agents.filter(
+    (a) => a.agentMode === 'WALLET' || !!a.realWalletAddress
+  );
 
   for (const agent of demoAgents) {
     const positions = await getDemoPositions(agent.id, userEmail);

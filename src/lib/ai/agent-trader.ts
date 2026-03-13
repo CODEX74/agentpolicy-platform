@@ -59,6 +59,8 @@ export interface AgentTraderInput {
   marketPrices: MarketPrices;
   /** Простой тренд за последние "свечи" (мок: up / down / stable) */
   marketTrend: 'up' | 'down' | 'stable';
+  /** Оценочная комиссия сети/свапа в USD для следующей сделки (учитывать при решении о покупке) */
+  estimatedFeeUsd?: number;
 }
 
 /** CoinGecko id → тикер для отображения */
@@ -172,12 +174,13 @@ ${styleBlock}
 Уже потрачено сегодня: ${input.spentTodayEth} USDT, за неделю: ${input.spentWeekEth} USDT.
 
 Рынок (цены в USD): ${pricesLine}. Тренд: ${input.marketTrend}.
+${input.estimatedFeeUsd != null && input.estimatedFeeUsd > 0 ? `Примерная комиссия сети/свапа за сделку: ${input.estimatedFeeUsd.toFixed(2)} USD. Учитывай при решении: при малой сумме покупки доля комиссии велика — решай, оправдана ли сделка.` : ''}
 
 Если доступный баланс больше нуля и тренд не down — допустима одна покупка в рамках лимитов (amountEth укажи в USD, не в ETH).
         
 Действия: buy_coin (купить криптоактив за USDT — только ETH, BTC, SOL и т.д., не USDT), sell_coin (продать), transfer (перевод), hold (ничего не делать).
-При buy_coin обязательно укажи: amountEth (сумма в USD для покупки), asset (тикер крипты: ETH, BTC, SOL… не USDT), reason, priceReason, plans, и горизонт (ИНВЕСТОР: termDays>=10; ТРЕЙДЕР: termMinutes 5–30).
-При sell_coin обязательно укажи: asset, reason, priceReason, plans (почему закрываешь позицию и что дальше).
+При buy_coin обязательно укажи: amountEth (сумма в USD для покупки), asset (тикер крипты: ETH, BTC, SOL… не USDT), reason (обязательно, не пустое), priceReason, plans, и горизонт (ИНВЕСТОР: termDays>=10; ТРЕЙДЕР: termMinutes 5–30). Поля reason и termDays/termMinutes обязательны для buy_coin.
+При sell_coin обязательно укажи: asset, reason (обязательно), priceReason, plans (почему закрываешь позицию и что дальше).
 При hold всегда пиши развёрнутое обоснование (reason): почему не покупаешь, что ждёшь, какие уровни или условия важны.
 
 Все текстовые поля (reason, priceReason, plans) пиши ТОЛЬКО на чистом русском языке, без английских слов, без других алфавитов, без эмодзи и спецсимволов. Коротко и понятно, 1–2 предложения.

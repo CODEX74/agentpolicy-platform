@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:webpack": "next dev --webpack",
-    "build": "prisma generate && patch-package && next build --webpack",
+    "build": "prisma generate && prisma migrate deploy && patch-package && next build --webpack",
     "postinstall": "patch-package",
     "start": "next start",
     "lint": "eslint",

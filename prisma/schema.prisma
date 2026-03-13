@@ -187,6 +187,8 @@ model RealTransaction {
   network       String   @default("base")
   walletAddress String
   reason        String?  // обоснование от нейросети
+  termDays      Int?     // срок удержания в днях (от ИИ)
+  feeUsd        Float?   // комиссия сети/свапа в USD
   createdAt     DateTime @default(now())
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)

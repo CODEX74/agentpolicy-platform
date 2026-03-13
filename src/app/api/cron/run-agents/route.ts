@@ -162,6 +162,12 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
         // без баланса оставляем лимит по политике
       }
 
+      const networkIdForInput =
+        agent.realWalletNetwork ?? "base-sepolia";
+      const estimatedFeeUsd =
+        networkIdForInput === "ethereum-mainnet"
+          ? 0.0003 * ethPriceUsd
+          : undefined;
       const input = {
         agentName: agent.name,
         agentType: agent.agentType as "INVESTOR" | "TRADER",
@@ -177,6 +183,9 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
         ethPriceUsd,
         marketPrices,
         marketTrend,
+        ...(estimatedFeeUsd != null && estimatedFeeUsd > 0
+          ? { estimatedFeeUsd }
+          : {}),
       };
 
       const decisionResult = await getAgentTradeDecision(input);
@@ -443,6 +452,25 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
             transport: http(rpcUrlEth),
           });
           const approveCalldata = getApproveCalldataDex(tokenAddr, sellAmountWei);
+          let feeUsdSell: number | undefined;
+          try {
+            const gasPrice = await publicClientSell.getGasPrice();
+            const gasApprove = await publicClientSell.estimateGas({
+              account: account.address,
+              to: approveCalldata.to,
+              data: approveCalldata.data,
+            });
+            const gasSwap = await publicClientSell.estimateGas({
+              account: account.address,
+              to: swapResult.to,
+              data: swapResult.data,
+              value: swapResult.value,
+            });
+            const feeWei = (gasApprove + gasSwap) * gasPrice;
+            feeUsdSell = Number(feeWei) / 1e18 * ethPriceUsd;
+          } catch {
+            feeUsdSell = undefined;
+          }
           await walletClientSell.sendTransaction({
             to: approveCalldata.to,
             data: approveCalldata.data,
@@ -465,6 +493,8 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
               network: "ethereum-mainnet",
               walletAddress: agent.realWalletAddress,
               reason: decision.reason ?? undefined,
+              termDays: decision.termDays ?? undefined,
+              feeUsd: feeUsdSell,
             },
           });
           realResults.push({
@@ -697,6 +727,7 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
         }
 
         let txHash: string | undefined;
+        let feeUsdBuy: number | undefined;
         const walletNetworkId =
           wallet.networkId || process.env.NETWORK_ID || "base-sepolia";
 
@@ -758,6 +789,21 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
               transport: http(rpcUrl),
             });
 
+            if (swapCalldataResult && walletNetworkId === "ethereum-mainnet") {
+              try {
+                const gasPrice = await publicClientEth.getGasPrice();
+                const gasEstimate = await publicClientEth.estimateGas({
+                  account: account.address,
+                  to: swapCalldataResult.to,
+                  data: swapCalldataResult.data,
+                  value: swapCalldataResult.value,
+                });
+                feeUsdBuy =
+                  Number(gasEstimate * gasPrice) / 1e18 * ethPriceUsd;
+              } catch {
+                feeUsdBuy = undefined;
+              }
+            }
             if (swapCalldataResult) {
               txHash = await client.sendTransaction({
                 to: swapCalldataResult.to,
@@ -795,6 +841,8 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
               network: agent.realWalletNetwork ?? "base",
               walletAddress: agent.realWalletAddress,
               reason: decision.reason ?? undefined,
+              termDays: decision.termDays ?? undefined,
+              feeUsd: feeUsdBuy,
             },
           });
 

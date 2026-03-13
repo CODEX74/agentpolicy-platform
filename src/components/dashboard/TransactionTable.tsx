@@ -19,6 +19,7 @@ interface Tx {
   plans?: string;
   assetPriceUsd?: number;
   amountUsd?: number;
+  feeUsd?: number;
 }
 
 const typeLabels: Record<Lang, Record<string, string>> = {
@@ -32,6 +33,7 @@ const t = {
     type: 'Тип',
     quantity: 'Количество монет',
     priceUsdt: 'Цена в USDT',
+    fee: 'Комиссия',
     term: 'Срок покупки',
     date: 'Дата',
     reason: 'Причина',
@@ -47,6 +49,7 @@ const t = {
     type: 'Type',
     quantity: 'Quantity',
     priceUsdt: 'Price in USDT',
+    fee: 'Fee',
     term: 'Purchase term',
     date: 'Date',
     reason: 'Reason',
@@ -90,6 +93,7 @@ export function TransactionTable({ transactions }: { transactions: Tx[] }) {
             <th className="px-4 py-3 text-left font-medium">{text.type}</th>
             <th className="px-4 py-3 text-left font-medium">{text.quantity}</th>
             <th className="px-4 py-3 text-left font-medium">{text.priceUsdt}</th>
+            <th className="px-4 py-3 text-left font-medium">{text.fee}</th>
             <th className="px-4 py-3 text-left font-medium">{text.term}</th>
             <th className="px-4 py-3 text-left font-medium">{text.reason}</th>
             <th className="px-4 py-3 text-left font-medium">{text.date}</th>
@@ -104,6 +108,9 @@ export function TransactionTable({ transactions }: { transactions: Tx[] }) {
                 <td className="px-4 py-3">{formatTxType(tx.type, lang)}</td>
                 <td className="px-4 py-3 font-mono text-xs">{quantityStr}</td>
                 <td className="px-4 py-3">{priceUsdt != null ? `$${formatAmount(priceUsdt, 2)}` : '—'}</td>
+                <td className="px-4 py-3 text-zinc-500">
+                  {tx.feeUsd != null && tx.feeUsd > 0 ? `$${formatAmount(tx.feeUsd, 2)}` : '—'}
+                </td>
                 <td className="px-4 py-3 text-zinc-500">
                   {tx.termDays != null ? `${tx.termDays} ${text.termDays}` : '—'}
                 </td>

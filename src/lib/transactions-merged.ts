@@ -27,6 +27,8 @@ export interface UnifiedTransaction {
   assetPriceUsd?: number;
   /** Сумма в USDT (для реальных — amountUsd из БД) */
   amountUsd?: number;
+  /** Комиссия сети/свапа в USD (для реальных транзакций) */
+  feeUsd?: number;
 }
 
 /**
@@ -99,6 +101,8 @@ export async function getRealTransactionsForEmail(
         asset: t.asset,
         reason: t.reason ?? undefined,
         amountUsd: t.amountUsd,
+        termDays: t.termDays ?? undefined,
+        feeUsd: t.feeUsd ?? undefined,
       };
     });
 

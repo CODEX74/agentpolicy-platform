@@ -4,6 +4,7 @@ import { getDemoPositions } from '@/lib/db/demo-transactions';
 import { getMarketPrices } from '@/lib/ai/agent-trader';
 import { getRealWalletBalance } from '@/lib/agents/realWallet';
 import { formatAssetQuantity } from '@/lib/utils/format';
+import { logger } from '@/lib/utils/logger';
 
 /**
  * Возвращает текст сообщения «демо-баланс» для отправки в Telegram.
@@ -94,33 +95,15 @@ export async function GET(req: NextRequest) {
 
       lines.push(`• ${agent.name}`);
       lines.push(`  Баланс: ${balanceEth.toFixed(6)} ETH`);
-
-      // #region agent log
-      fetch('http://127.0.0.1:7866/ingest/f2b1bcb0-5cd1-4cfb-a22c-e4590e10ebab', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Debug-Session-Id': '57b590',
-        },
-        body: JSON.stringify({
-          sessionId: '57b590',
-          runId: 'telegram-balance',
-          hypothesisId: 'H-balance',
-          location: 'src/app/api/telegram/balance/route.ts:real-loop',
-          message: 'Real agent balance line',
-          data: {
-            agentId: agent.id,
-            agentName: agent.name,
-            agentMode: agent.agentMode,
-            realWalletNetwork: agent.realWalletNetwork,
-            realWalletAddress: agent.realWalletAddress,
-            balanceWei,
-            balanceEth,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion agent log
+      logger.info('telegram balance real agent', {
+        agentId: agent.id,
+        agentName: agent.name,
+        agentMode: agent.agentMode,
+        realWalletNetwork: agent.realWalletNetwork,
+        realWalletAddress: agent.realWalletAddress,
+        balanceWei,
+        balanceEth,
+      });
 
       if (maxPosEth != null || dailyLimitEth != null) {
         lines.push(

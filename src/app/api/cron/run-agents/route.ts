@@ -791,8 +791,15 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
 
             if (swapCalldataResult && walletNetworkId === "ethereum-mainnet") {
               try {
-                const gasPrice = await publicClientEth.getGasPrice();
-                const gasEstimate = await publicClientEth.estimateGas({
+                const rpcUrlEthBuy =
+                  process.env.ETHEREUM_RPC_URL ??
+                  "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID";
+                const publicClientEthBuy = createPublicClient({
+                  chain: mainnet,
+                  transport: http(rpcUrlEthBuy),
+                });
+                const gasPrice = await publicClientEthBuy.getGasPrice();
+                const gasEstimate = await publicClientEthBuy.estimateGas({
                   account: account.address,
                   to: swapCalldataResult.to,
                   data: swapCalldataResult.data,

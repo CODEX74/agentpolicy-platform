@@ -108,7 +108,8 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
       const maxPerTx = agent.realMaxPositionUsd ?? -1;
       const minPerTx = agent.realMinPositionUsd ?? 0;
 
-      const ethPriceUsd = usdtPrice || 1;
+      // Цена ETH в USD: сначала берём из marketPrices, затем из usdtPrice, в крайнем случае 1.
+      const ethPriceUsd = marketPrices.ETH ?? usdtPrice ?? 1;
 
       const input = {
         agentName: agent.name,

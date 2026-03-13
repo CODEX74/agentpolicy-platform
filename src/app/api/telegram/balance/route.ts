@@ -94,6 +94,34 @@ export async function GET(req: NextRequest) {
 
       lines.push(`• ${agent.name}`);
       lines.push(`  Баланс: ${balanceEth.toFixed(6)} ETH`);
+
+      // #region agent log
+      fetch('http://127.0.0.1:7866/ingest/f2b1bcb0-5cd1-4cfb-a22c-e4590e10ebab', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Debug-Session-Id': '57b590',
+        },
+        body: JSON.stringify({
+          sessionId: '57b590',
+          runId: 'telegram-balance',
+          hypothesisId: 'H-balance',
+          location: 'src/app/api/telegram/balance/route.ts:real-loop',
+          message: 'Real agent balance line',
+          data: {
+            agentId: agent.id,
+            agentName: agent.name,
+            agentMode: agent.agentMode,
+            realWalletNetwork: agent.realWalletNetwork,
+            realWalletAddress: agent.realWalletAddress,
+            balanceWei,
+            balanceEth,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion agent log
+
       if (maxPosEth != null || dailyLimitEth != null) {
         lines.push(
           `  Лимиты: макс позиция ${maxPosEth ?? '-'} ETH / дневной лимит ${dailyLimitEth ?? '-'} ETH`

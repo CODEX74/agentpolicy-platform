@@ -82,6 +82,20 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
   }[] = [];
 
   if (realAgents.length > 0) {
+    // #region agent log
+    fetch("http://127.0.0.1:7866/ingest/f2b1bcb0-5cd1-4cfb-a22c-e4590e10ebab", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "57b590" },
+      body: JSON.stringify({
+        sessionId: "57b590",
+        location: "run-agents/route.ts:realAgents",
+        message: "real agents count",
+        data: { count: realAgents.length, firstId: realAgents[0]?.id ?? null },
+        timestamp: Date.now(),
+        hypothesisId: "H1",
+      }),
+    }).catch(() => {});
+    // #endregion
     const [marketPrices, usdtPrice] = await Promise.all([
       getMarketPrices(),
       getUsdtPriceUsd(),
@@ -108,8 +122,9 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
       const maxPerTx = agent.realMaxPositionUsd ?? -1;
       const minPerTx = agent.realMinPositionUsd ?? 0;
 
+      // Лимит транзакций в час: только если задан и > 0 (0 и null = без лимита).
       const maxTxPerHour = agent.realMinTransactionsPerHour ?? -1;
-      if (maxTxPerHour >= 0) {
+      if (maxTxPerHour > 0) {
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
         const countLastHour = await prisma.realTransaction.count({
           where: {
@@ -133,10 +148,24 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
       // Цена ETH в USD: сначала берём из marketPrices, затем из usdtPrice, в крайнем случае 1.
       const ethPriceUsd = marketPrices.ETH ?? usdtPrice ?? 1;
 
+      const remainingDaily = dailyLimit > 0 ? dailyLimit - spentToday : -1;
+      let availableBalanceUsd = dailyLimit > 0 ? dailyLimit : 0;
+      try {
+        const { getRealWalletBalance } = await import("@/lib/agents/realWallet");
+        const { balanceWei } = await getRealWalletBalance(agent.id, agent.user.id);
+        const balanceEth = Number(balanceWei) / 1e18;
+        const balanceUsd = balanceEth * ethPriceUsd;
+        const capByDaily = remainingDaily > 0 ? remainingDaily : balanceUsd;
+        const capByMaxTx = maxPerTx > 0 ? Math.min(capByDaily, maxPerTx) : capByDaily;
+        availableBalanceUsd = Math.max(0, Math.min(balanceUsd, capByMaxTx));
+      } catch {
+        // без баланса оставляем лимит по политике
+      }
+
       const input = {
         agentName: agent.name,
         agentType: agent.agentType as "INVESTOR" | "TRADER",
-        demoBalanceEth: dailyLimit > 0 ? dailyLimit : 0,
+        demoBalanceEth: Math.max(availableBalanceUsd, minPerTx > 0 ? minPerTx : 0),
         policy: {
           dailyLimit,
           weeklyLimit: -1,
@@ -152,7 +181,26 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
 
       const decisionResult = await getAgentTradeDecision(input);
       const decision = decisionResult.decision;
-
+      // #region agent log
+      fetch("http://127.0.0.1:7866/ingest/f2b1bcb0-5cd1-4cfb-a22c-e4590e10ebab", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "57b590" },
+        body: JSON.stringify({
+          sessionId: "57b590",
+          location: "run-agents/route.ts:afterDecision",
+          message: "AI decision",
+          data: {
+            agentId: agent.id,
+            action: decision?.action ?? null,
+            amountEth: decision?.amountEth ?? null,
+            asset: decision?.asset ?? null,
+            error: decisionResult.error ?? null,
+          },
+          timestamp: Date.now(),
+          hypothesisId: "H2",
+        }),
+      }).catch(() => {});
+      // #endregion
       if (!decision) {
         realResults.push({
           agentId: agent.id,
@@ -165,15 +213,28 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
         continue;
       }
 
-      const rawAmount = decision.amountEth ?? 0;
+      let rawAmount = decision.amountEth ?? 0;
+      if (typeof rawAmount !== "number" || !Number.isFinite(rawAmount)) {
+        rawAmount = 0;
+      }
       // Приводим сумму к лимитам: не больше maxPerTx и не больше доступного дневного лимита.
-      const remainingDaily = dailyLimit > 0 ? dailyLimit - spentToday : -1;
       let amount = rawAmount;
       if (maxPerTx > 0) {
         amount = Math.min(amount, maxPerTx);
       }
       if (remainingDaily > 0) {
         amount = Math.min(amount, remainingDaily);
+      }
+
+      // Если модель вернула buy_coin без суммы или с нулём — при наличии лимита делаем покупку на минимум.
+      if (
+        decision.action === "buy_coin" &&
+        amount <= 0 &&
+        minPerTx > 0 &&
+        (remainingDaily < 0 || remainingDaily >= minPerTx) &&
+        (maxPerTx < 0 || maxPerTx >= minPerTx)
+      ) {
+        amount = minPerTx;
       }
 
       const allowedByDaily =
@@ -210,6 +271,25 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
           continue;
         }
       }
+      // #region agent log
+      fetch("http://127.0.0.1:7866/ingest/f2b1bcb0-5cd1-4cfb-a22c-e4590e10ebab", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "57b590" },
+        body: JSON.stringify({
+          sessionId: "57b590",
+          location: "run-agents/route.ts:beforeBuyCheck",
+          message: "before buy_coin skip check",
+          data: {
+            agentId: agent.id,
+            action: decision.action,
+            amount,
+            willSkip: decision.action !== "buy_coin" || amount <= 0,
+          },
+          timestamp: Date.now(),
+          hypothesisId: "H3",
+        }),
+      }).catch(() => {});
+      // #endregion
 
       // ——— sell_coin: только Ethereum mainnet, DEX TOKEN → USDT ———
       if (decision.action === "sell_coin" && decision.asset) {
@@ -424,6 +504,20 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
 
       if (networkId === "ethereum-mainnet") {
         if (!decision.asset) {
+          // #region agent log
+          fetch("http://127.0.0.1:7866/ingest/f2b1bcb0-5cd1-4cfb-a22c-e4590e10ebab", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "57b590" },
+            body: JSON.stringify({
+              sessionId: "57b590",
+              location: "run-agents/route.ts:ethMainnetNoAsset",
+              message: "skip: no asset for ethereum-mainnet",
+              data: { agentId: agent.id },
+              timestamp: Date.now(),
+              hypothesisId: "H4",
+            }),
+          }).catch(() => {});
+          // #endregion
           realResults.push({
             agentId: agent.id,
             agentName: agent.name,
@@ -439,6 +533,20 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
           getSwapCalldataETHToToken: getSwapEthToToken,
         } = await import("@/lib/dex/uniswap");
         if (decision.asset === "ETH" || decision.asset === "WETH") {
+          // #region agent log
+          fetch("http://127.0.0.1:7866/ingest/f2b1bcb0-5cd1-4cfb-a22c-e4590e10ebab", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "57b590" },
+            body: JSON.stringify({
+              sessionId: "57b590",
+              location: "run-agents/route.ts:ethMainnetEthWeth",
+              message: "skip: buy ETH/WETH on mainnet",
+              data: { agentId: agent.id, asset: decision.asset },
+              timestamp: Date.now(),
+              hypothesisId: "H4",
+            }),
+          }).catch(() => {});
+          // #endregion
           realResults.push({
             agentId: agent.id,
             agentName: agent.name,
@@ -451,6 +559,20 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
         }
         const tokenOut = getTickerAddr(decision.asset);
         if (!tokenOut) {
+          // #region agent log
+          fetch("http://127.0.0.1:7866/ingest/f2b1bcb0-5cd1-4cfb-a22c-e4590e10ebab", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "57b590" },
+            body: JSON.stringify({
+              sessionId: "57b590",
+              location: "run-agents/route.ts:ethMainnetTokenNotInWhitelist",
+              message: "skip: token not in whitelist",
+              data: { agentId: agent.id, asset: decision.asset },
+              timestamp: Date.now(),
+              hypothesisId: "H4",
+            }),
+          }).catch(() => {});
+          // #endregion
           realResults.push({
             agentId: agent.id,
             agentName: agent.name,
@@ -481,6 +603,20 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
       }
 
       if (isConnectedWallet) {
+        // #region agent log
+        fetch("http://127.0.0.1:7866/ingest/f2b1bcb0-5cd1-4cfb-a22c-e4590e10ebab", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "57b590" },
+          body: JSON.stringify({
+            sessionId: "57b590",
+            location: "run-agents/route.ts:buyPendingCreate",
+            message: "creating PendingRealTransaction",
+            data: { agentId: agent.id, amount, asset: decision.asset },
+            timestamp: Date.now(),
+            hypothesisId: "H5",
+          }),
+        }).catch(() => {});
+        // #endregion
         // Подключённый кошелёк: создаём ожидающую транзакцию; пользователь подпишет в браузере.
         await prisma.pendingRealTransaction.create({
           data: {

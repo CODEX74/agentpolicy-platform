@@ -15,7 +15,15 @@ function getGroqProvider() {
 
 const decisionSchema = z.object({
   action: z.enum(['buy_coin', 'sell_coin', 'transfer', 'hold']),
-  amountEth: z.number().min(0).max(100).optional(),
+  amountEth: z.preprocess(
+    (val) => {
+      if (val == null || val === '') return undefined;
+      if (typeof val === 'number') return Number.isFinite(val) ? val : undefined;
+      const n = parseFloat(String(val));
+      return Number.isFinite(n) ? n : undefined;
+    },
+    z.number().min(0).max(100).optional()
+  ),
   reason: z.string(),
   /** Какой актив покупать/продавать: тикер (ETH, BTC, SOL и т.д.) */
   asset: z.string().max(20).optional(),
@@ -164,9 +172,11 @@ ${styleBlock}
 Уже потрачено сегодня: ${input.spentTodayEth} USDT, за неделю: ${input.spentWeekEth} USDT.
 
 Рынок (цены в USD): ${pricesLine}. Тренд: ${input.marketTrend}.
+
+Если доступный баланс больше нуля и тренд не down — допустима одна покупка в рамках лимитов (amountEth укажи в USD, не в ETH).
         
 Действия: buy_coin (купить криптоактив за USDT — только ETH, BTC, SOL и т.д., не USDT), sell_coin (продать), transfer (перевод), hold (ничего не делать).
-При buy_coin обязательно укажи: amountEth, asset (тикер крипты: ETH, BTC, SOL… не USDT), reason, priceReason, plans, и горизонт (ИНВЕСТОР: termDays>=10; ТРЕЙДЕР: termMinutes 5–30).
+При buy_coin обязательно укажи: amountEth (сумма в USD для покупки), asset (тикер крипты: ETH, BTC, SOL… не USDT), reason, priceReason, plans, и горизонт (ИНВЕСТОР: termDays>=10; ТРЕЙДЕР: termMinutes 5–30).
 При sell_coin обязательно укажи: asset, reason, priceReason, plans (почему закрываешь позицию и что дальше).
 При hold всегда пиши развёрнутое обоснование (reason): почему не покупаешь, что ждёшь, какие уровни или условия важны.
 

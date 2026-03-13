@@ -583,8 +583,6 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
           });
           continue;
         }
-        const amountEth = amount / (ethPriceUsd || 1);
-        const valueWeiEth = BigInt(Math.floor(amountEth * 1e18));
         const rpcUrlEth =
           process.env.ETHEREUM_RPC_URL ??
           "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID";
@@ -592,6 +590,27 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
           chain: mainnet,
           transport: http(rpcUrlEth),
         });
+        const walletEthBalanceWei = await publicClientEth.getBalance({
+          address: agent.realWalletAddress as Address,
+        });
+        const walletEthBalance = Number(walletEthBalanceWei) / 1e18;
+        const gasReserveEth = 0.0003;
+        const maxSpendEth = Math.max(0, walletEthBalance - gasReserveEth);
+        let amountEth = amount / (ethPriceUsd || 1);
+        amountEth = Math.min(amountEth, maxSpendEth);
+        if (amountEth <= 0) {
+          realResults.push({
+            agentId: agent.id,
+            agentName: agent.name,
+            userEmail,
+            action: "hold",
+            reason:
+              "Недостаточно ETH на кошельке для оплаты сделки и газа на Ethereum mainnet.",
+            asset: decision.asset,
+          });
+          continue;
+        }
+        const valueWeiEth = BigInt(Math.floor(amountEth * 1e18));
         swapCalldataResult = await getSwapEthToToken({
           amountInWei: valueWeiEth,
           tokenOut,

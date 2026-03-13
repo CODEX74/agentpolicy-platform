@@ -58,6 +58,7 @@ interface Tx {
   termDays?: number;
   plans?: string;
   assetPriceUsd?: number;
+  amountUsd?: number;
 }
 
 export function TransactionsPageContent({

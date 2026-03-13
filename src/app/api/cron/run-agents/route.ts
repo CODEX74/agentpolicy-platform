@@ -342,7 +342,7 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
           });
           continue;
         }
-        if (agent.realWalletId) {
+        if (!walletForSell?.serverPrivateKey) {
           realResults.push({
             agentId: agent.id,
             agentName: agent.name,
@@ -388,13 +388,25 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
             if (sellAmountWei === BigInt(0)) sellAmountWei = balance;
           }
         }
-        if (sellAmountWei === BigInt(0)) {
+        if (sellAmountWei === BigInt(0) || balance === BigInt(0)) {
           realResults.push({
             agentId: agent.id,
             agentName: agent.name,
             userEmail,
             action: "sell_coin",
-            reason: "Нулевой баланс токена для продажи.",
+            reason: `На кошельке нет ${decision.asset}.`,
+            asset: decision.asset,
+          });
+          continue;
+        }
+        const MIN_SELL_USD = 0.1;
+        if (amountUsdWorth < MIN_SELL_USD) {
+          realResults.push({
+            agentId: agent.id,
+            agentName: agent.name,
+            userEmail,
+            action: "sell_coin",
+            reason: `На кошельке недостаточно ${decision.asset} для продажи (минимум ${MIN_SELL_USD}$).`,
             asset: decision.asset,
           });
           continue;
@@ -452,6 +464,7 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
               side: "sell",
               network: "ethereum-mainnet",
               walletAddress: agent.realWalletAddress,
+              reason: decision.reason ?? undefined,
             },
           });
           realResults.push({
@@ -781,8 +794,15 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
               side: "buy",
               network: agent.realWalletNetwork ?? "base",
               walletAddress: agent.realWalletAddress,
+              reason: decision.reason ?? undefined,
             },
           });
+
+          const amountUsd = amount;
+          const amountEthForDisplay =
+            walletNetworkId === "ethereum-mainnet"
+              ? Number(valueWei) / 1e18
+              : amountUsd / (ethPriceUsd || 1);
 
           realResults.push({
             agentId: agent.id,
@@ -791,8 +811,8 @@ async function handleCron(req: NextRequest): Promise<NextResponse> {
             action: "buy_coin",
             reason: decision.reason,
             asset: decision.asset,
-            amountEth: amount,
-            amountUsd: amount * ethPriceUsd,
+            amountEth: amountEthForDisplay,
+            amountUsd: amountUsd,
           });
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);

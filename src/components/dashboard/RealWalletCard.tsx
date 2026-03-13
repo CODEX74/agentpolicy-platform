@@ -18,7 +18,6 @@ type RealWalletInfo = {
   realMaxPositionUsd: number | null;
   realMinPositionUsd: number | null;
   realDailyLimitUsd: number | null;
-  realMinTransactionsPerHour: number | null;
   realNotes: string | null;
   run24_7: boolean;
   realTradeRecipient?: string | null;
@@ -52,7 +51,6 @@ const t = {
     maxPosition: "Максимальная позиция на один актив, USD",
     minPosition: "Минимум за транзакцию, USD",
     dailyLimit: "Дневной лимит по сделкам, USD",
-    minTxPerHour: "Минимальное кол-во транзакций в час",
     limitsBlockTitle: "Лимиты по сделкам",
     notesLabel: "Комментарий / предупреждение",
     save: "Сохранить настройки",
@@ -83,7 +81,6 @@ const t = {
     maxPosition: "Max position per asset, USD",
     minPosition: "Minimum per transaction, USD",
     dailyLimit: "Daily trading limit, USD",
-    minTxPerHour: "Min. transactions per hour",
     limitsBlockTitle: "Trading limits",
     notesLabel: "Comment / warning",
     save: "Save settings",
@@ -111,7 +108,6 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
   const [maxPosition, setMaxPosition] = useState<string>("");
   const [minPosition, setMinPosition] = useState<string>("");
   const [dailyLimit, setDailyLimit] = useState<string>("");
-  const [minTxPerHour, setMinTxPerHour] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [riskChecked, setRiskChecked] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -146,7 +142,6 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
           realMaxPositionUsd: number | null;
           realMinPositionUsd: number | null;
           realDailyLimitUsd: number | null;
-          realMinTransactionsPerHour?: number | null;
           realNotes: string | null;
           run24_7?: boolean;
           realTradeRecipient?: string | null;
@@ -163,7 +158,6 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
           realMaxPositionUsd: data.realMaxPositionUsd,
           realMinPositionUsd: data.realMinPositionUsd,
           realDailyLimitUsd: data.realDailyLimitUsd,
-          realMinTransactionsPerHour: data.realMinTransactionsPerHour ?? null,
           realNotes: data.realNotes,
           run24_7: data.run24_7 ?? false,
           realTradeRecipient: data.realTradeRecipient ?? null,
@@ -184,11 +178,6 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
         );
         setDailyLimit(
           next.realDailyLimitUsd != null ? String(next.realDailyLimitUsd) : "",
-        );
-        setMinTxPerHour(
-          next.realMinTransactionsPerHour != null
-            ? String(next.realMinTransactionsPerHour)
-            : "",
         );
         setNotes(next.realNotes ?? "");
         setRun247(next.run24_7);
@@ -236,10 +225,6 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
       const minPosNum = minPosition ? Math.max(1, Number(minPosition)) : null;
       body.realMinPositionUsd = minPosNum;
       body.realDailyLimitUsd = dailyLimit ? Number(dailyLimit) : null;
-      const minTxPerHourNum = minTxPerHour
-        ? Math.max(0, Math.floor(Number(minTxPerHour)))
-        : null;
-      body.realMinTransactionsPerHour = minTxPerHourNum;
       body.realNotes = notes || null;
       body.realTradeRecipient = recipient.trim() || null;
       body.realRiskAccepted = riskChecked;
@@ -378,7 +363,11 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
                 <h4 className="mb-3 text-sm font-semibold text-zinc-800 dark:text-zinc-200">
                   {text.limitsBlockTitle}
                 </h4>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
+                  Эти лимиты задают рамки для любой автоматической и принудительной покупки:
+                  размер одной позиции, минимальный размер сделки и суммарный дневной объём.
+                </p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   <div>
                     <label className="mb-1 block text-xs font-medium">
                       {text.maxPosition}
@@ -410,19 +399,6 @@ export function RealWalletCard({ agentId }: { agentId: string }) {
                       value={dailyLimit}
                       onChange={(e) => setDailyLimit(e.target.value)}
                       placeholder="500"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-medium">
-                      {text.minTxPerHour}
-                    </label>
-                    <Input
-                      value={minTxPerHour}
-                      onChange={(e) => setMinTxPerHour(e.target.value)}
-                      placeholder="—"
-                      type="number"
-                      min={0}
-                      step={1}
                     />
                   </div>
                 </div>

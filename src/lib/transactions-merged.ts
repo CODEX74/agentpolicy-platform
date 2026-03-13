@@ -12,7 +12,7 @@ export interface UnifiedTransaction {
   createdAt: string;
   /** Демо-операция агента (демо-баланс) */
   isDemo?: boolean;
-  /** Причина/комментарий (для демо) */
+  /** Причина/комментарий (для демо и реальных) */
   reason?: string;
   agentId?: string;
   /** Актив (ETH, BTC, SOL и т.д.) */
@@ -25,6 +25,8 @@ export interface UnifiedTransaction {
   plans?: string;
   /** Цена актива в USD на момент покупки */
   assetPriceUsd?: number;
+  /** Сумма в USDT (для реальных — amountUsd из БД) */
+  amountUsd?: number;
 }
 
 /**
@@ -80,21 +82,25 @@ export async function getRealTransactionsForEmail(
 
   const ethPriceUsd = marketPrices.ETH ?? usdtPrice ?? 1;
 
-  const mapped: UnifiedTransaction[] = rows.map((t) => {
-    const amountEth =
-      ethPriceUsd && Number.isFinite(ethPriceUsd) ? t.amountUsd / ethPriceUsd : t.amountUsd;
-    return {
-      _id: t.id,
-      type: t.side === 'sell' ? 'sell_coin' : 'buy_coin',
-      amount: amountEth,
-      currency: 'ETH',
-      toAddress: t.walletAddress,
-      status: 'real',
-      createdAt: t.createdAt.toISOString(),
-      isDemo: false,
-      asset: t.asset,
-    };
-  });
+  const mapped: UnifiedTransaction[] = rows
+    .filter((t) => t.amountUsd >= 0.1)
+    .map((t) => {
+      const amountEth =
+        ethPriceUsd && Number.isFinite(ethPriceUsd) ? t.amountUsd / ethPriceUsd : t.amountUsd;
+      return {
+        _id: t.id,
+        type: t.side === 'sell' ? 'sell_coin' : 'buy_coin',
+        amount: amountEth,
+        currency: 'ETH',
+        toAddress: t.walletAddress,
+        status: 'real',
+        createdAt: t.createdAt.toISOString(),
+        isDemo: false,
+        asset: t.asset,
+        reason: t.reason ?? undefined,
+        amountUsd: t.amountUsd,
+      };
+    });
 
   return mapped;
 }

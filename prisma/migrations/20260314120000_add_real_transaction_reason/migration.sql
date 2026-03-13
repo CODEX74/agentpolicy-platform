@@ -1,0 +1,1 @@
+ALTER TABLE "RealTransaction" ADD COLUMN IF NOT EXISTS "reason" TEXT;

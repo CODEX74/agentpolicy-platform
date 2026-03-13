@@ -186,6 +186,7 @@ model RealTransaction {
   side          String   // 'buy' | 'sell'
   network       String   @default("base")
   walletAddress String
+  reason        String?  // обоснование от нейросети
   createdAt     DateTime @default(now())
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)

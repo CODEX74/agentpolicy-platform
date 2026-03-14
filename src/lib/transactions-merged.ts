@@ -84,6 +84,34 @@ export async function getRealTransactionsForEmail(
 
   const ethPriceUsd = marketPrices.ETH ?? usdtPrice ?? 1;
 
+  // #region agent log
+  const firstRow = rows[0];
+  if (firstRow) {
+    fetch('http://127.0.0.1:7866/ingest/34541abd-a618-492c-8a7a-56d67fc008ed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '57b590' },
+      body: JSON.stringify({
+        sessionId: '57b590',
+        location: 'transactions-merged.ts:getRealTransactionsForEmail',
+        message: 'real tx first row from DB',
+        data: {
+          rowCount: rows.length,
+          firstRaw: {
+            reason: firstRow.reason,
+            termDays: firstRow.termDays,
+            feeUsd: firstRow.feeUsd,
+            hasReason: 'reason' in firstRow,
+            hasTermDays: 'termDays' in firstRow,
+            hasFeeUsd: 'feeUsd' in firstRow,
+          },
+        },
+        timestamp: Date.now(),
+        hypothesisId: 'H1',
+      }),
+    }).catch(() => {});
+  }
+  // #endregion
+
   const mapped: UnifiedTransaction[] = rows
     .filter((t) => t.amountUsd >= 0.1)
     .map((t) => {
@@ -105,6 +133,29 @@ export async function getRealTransactionsForEmail(
         feeUsd: t.feeUsd ?? undefined,
       };
     });
+
+  // #region agent log
+  if (mapped[0]) {
+    fetch('http://127.0.0.1:7866/ingest/34541abd-a618-492c-8a7a-56d67fc008ed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '57b590' },
+      body: JSON.stringify({
+        sessionId: '57b590',
+        location: 'transactions-merged.ts:getRealTransactionsForEmail:mapped',
+        message: 'real tx first mapped',
+        data: {
+          firstMapped: {
+            reason: mapped[0].reason,
+            termDays: mapped[0].termDays,
+            feeUsd: mapped[0].feeUsd,
+          },
+        },
+        timestamp: Date.now(),
+        hypothesisId: 'H3',
+      }),
+    }).catch(() => {});
+  }
+  // #endregion
 
   return mapped;
 }

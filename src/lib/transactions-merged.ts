@@ -115,13 +115,16 @@ export async function getRealTransactionsForEmail(
   const mapped: UnifiedTransaction[] = rows
     .filter((t) => t.amountUsd >= 0.1)
     .map((t) => {
-      const amountEth =
-        ethPriceUsd && Number.isFinite(ethPriceUsd) ? t.amountUsd / ethPriceUsd : t.amountUsd;
+      const assetPriceUsd = marketPrices[t.asset] ?? 1;
+      const tokenAmount =
+        assetPriceUsd > 0 && Number.isFinite(assetPriceUsd)
+          ? t.amountUsd / assetPriceUsd
+          : t.amountUsd;
       return {
         _id: t.id,
         type: t.side === 'sell' ? 'sell_coin' : 'buy_coin',
-        amount: amountEth,
-        currency: 'ETH',
+        amount: tokenAmount,
+        currency: t.asset ?? 'ETH',
         toAddress: t.walletAddress,
         status: 'real',
         createdAt: t.createdAt.toISOString(),

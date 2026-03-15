@@ -38,6 +38,20 @@ export async function getMergedTransactionsForEmail(
   email: string,
   limit = 100
 ): Promise<UnifiedTransaction[]> {
+  // #region agent log
+  fetch('http://127.0.0.1:7866/ingest/34541abd-a618-492c-8a7a-56d67fc008ed', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '6fdb07' },
+    body: JSON.stringify({
+      sessionId: '6fdb07',
+      location: 'transactions-merged.ts:getMergedTransactionsForEmail',
+      message: 'getMergedTransactionsForEmail called (demo only)',
+      data: { limit },
+      timestamp: Date.now(),
+      hypothesisId: 'H4',
+    }),
+  }).catch(() => {});
+  // #endregion
   const demoRows = await getDemoTransactionsByEmail(email);
   const demoMapped: UnifiedTransaction[] = demoRows.map((t) => ({
     _id: t._id,
@@ -56,6 +70,28 @@ export async function getMergedTransactionsForEmail(
     plans: t.plans,
     assetPriceUsd: t.assetPriceUsd,
   }));
+
+  // #region agent log
+  if (demoMapped[0]) {
+    fetch('http://127.0.0.1:7866/ingest/34541abd-a618-492c-8a7a-56d67fc008ed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '6fdb07' },
+      body: JSON.stringify({
+        sessionId: '6fdb07',
+        location: 'transactions-merged.ts:getMergedTransactionsForEmail:demoMapped',
+        message: 'demo first item reason/termDays/feeUsd',
+        data: {
+          reason: demoMapped[0].reason,
+          termDays: demoMapped[0].termDays,
+          feeUsd: demoMapped[0].feeUsd,
+          hasAmountUsd: 'amountUsd' in demoMapped[0],
+        },
+        timestamp: Date.now(),
+        hypothesisId: 'H5',
+      }),
+    }).catch(() => {});
+  }
+  // #endregion
 
   return demoMapped
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
@@ -87,29 +123,38 @@ export async function getRealTransactionsForEmail(
   // #region agent log
   const firstRow = rows[0];
   if (firstRow) {
+    const rawKeys = Object.keys(firstRow) as (keyof typeof firstRow)[];
     fetch('http://127.0.0.1:7866/ingest/34541abd-a618-492c-8a7a-56d67fc008ed', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '57b590' },
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '6fdb07' },
       body: JSON.stringify({
-        sessionId: '57b590',
+        sessionId: '6fdb07',
         location: 'transactions-merged.ts:getRealTransactionsForEmail',
         message: 'real tx first row from DB',
         data: {
           rowCount: rows.length,
-          firstRaw: {
-            reason: firstRow.reason,
-            termDays: firstRow.termDays,
-            feeUsd: firstRow.feeUsd,
-            hasReason: 'reason' in firstRow,
-            hasTermDays: 'termDays' in firstRow,
-            hasFeeUsd: 'feeUsd' in firstRow,
-          },
+          firstRawReason: firstRow.reason,
+          firstRawTermDays: firstRow.termDays,
+          firstRawFeeUsd: firstRow.feeUsd,
+          rawKeys: rawKeys.filter((k) => ['reason', 'termDays', 'feeUsd'].includes(k)),
         },
         timestamp: Date.now(),
         hypothesisId: 'H1',
       }),
     }).catch(() => {});
   }
+  fetch('http://127.0.0.1:7866/ingest/34541abd-a618-492c-8a7a-56d67fc008ed', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '6fdb07' },
+    body: JSON.stringify({
+      sessionId: '6fdb07',
+      location: 'transactions-merged.ts:getRealTransactionsForEmail',
+      message: 'getRealTransactionsForEmail called',
+      data: { rowCount: rows.length },
+      timestamp: Date.now(),
+      hypothesisId: 'H4',
+    }),
+  }).catch(() => {});
   // #endregion
 
   const mapped: UnifiedTransaction[] = rows
@@ -141,17 +186,15 @@ export async function getRealTransactionsForEmail(
   if (mapped[0]) {
     fetch('http://127.0.0.1:7866/ingest/34541abd-a618-492c-8a7a-56d67fc008ed', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '57b590' },
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '6fdb07' },
       body: JSON.stringify({
-        sessionId: '57b590',
+        sessionId: '6fdb07',
         location: 'transactions-merged.ts:getRealTransactionsForEmail:mapped',
         message: 'real tx first mapped',
         data: {
-          firstMapped: {
-            reason: mapped[0].reason,
-            termDays: mapped[0].termDays,
-            feeUsd: mapped[0].feeUsd,
-          },
+          reason: mapped[0].reason,
+          termDays: mapped[0].termDays,
+          feeUsd: mapped[0].feeUsd,
         },
         timestamp: Date.now(),
         hypothesisId: 'H3',
